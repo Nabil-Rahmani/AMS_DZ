@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "972912647909",
+    "project_id": "auctionapp-87bee",
+    "storage_bucket": "auctionapp-87bee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:972912647909:android:9048d35f5d4b5574623e0c",
+        "android_client_info": {
+          "package_name": "com.auctionapp2.auction_app2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATn1hSKwv3DJOVqaQh0XUXlIsswa1eYWs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
