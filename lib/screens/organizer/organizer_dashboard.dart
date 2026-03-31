@@ -18,6 +18,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
 
   KycStatus? _kycStatus;
   String? _kycRejectionReason;
+  bool _hasUploadedDocs = false;
   int _totalAuctions = 0;
   int _activeAuctions = 0;
   double _totalRevenue = 0;
@@ -38,6 +39,8 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
       setState(() {
         _kycStatus = _parseKyc(data['kycStatus']);
         _kycRejectionReason = data['kycRejectionReason'];
+        _hasUploadedDocs = data['kycDocuments'] != null &&
+            (data['kycDocuments'] as Map).isNotEmpty;
       });
     }
 
@@ -83,8 +86,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1565C0),
         title: const Text('لوحة تحكم البائع',
-            style:
-            TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
@@ -105,11 +107,8 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── KYC Banner ───────────────────────────────
               _buildKycBanner(),
               const SizedBox(height: 16),
-
-              // ── الإحصائيات ───────────────────────────────
               Row(
                 children: [
                   _buildStatCard('إجمالي المزادات',
@@ -124,15 +123,12 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                 ],
               ),
               const SizedBox(height: 20),
-
-              // ── قائمة المزادات ───────────────────────────
               const Text('مزاداتي',
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1565C0))),
               const SizedBox(height: 10),
-
               if (uid != null)
                 StreamBuilder<QuerySnapshot>(
                   stream: _firestore
@@ -144,8 +140,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    if (!snapshot.hasData ||
-                        snapshot.data!.docs.isEmpty) {
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                       return Center(
                         child: Column(
                           children: [
@@ -154,8 +149,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                                 size: 64, color: Colors.grey.shade400),
                             const SizedBox(height: 8),
                             Text('لا توجد مزادات بعد',
-                                style:
-                                TextStyle(color: Colors.grey.shade500)),
+                                style: TextStyle(color: Colors.grey.shade500)),
                           ],
                         ),
                       );
@@ -191,6 +185,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   }
 
   Widget _buildKycBanner() {
+    // ✅ معتمد
     if (_kycStatus == KycStatus.approved) {
       return Container(
         padding: const EdgeInsets.all(12),
@@ -212,6 +207,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
       );
     }
 
+    // ❌ مرفوض — مع زر إعادة الرفع
     if (_kycStatus == KycStatus.rejected) {
       return Container(
         padding: const EdgeInsets.all(12),
@@ -236,15 +232,30 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
             if (_kycRejectionReason != null) ...[
               const SizedBox(height: 4),
               Text('السبب: $_kycRejectionReason',
-                  style: TextStyle(
-                      color: Colors.red.shade600, fontSize: 12)),
+                  style:
+                  TextStyle(color: Colors.red.shade600, fontSize: 12)),
             ],
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.upload_file, color: Colors.white),
+                label: const Text('إعادة رفع الوثائق',
+                    style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade700,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10))),
+                onPressed: () => Navigator.pushNamed(
+                    context, AppRoutes.kycUpload).then((_) => _loadUserData()),
+              ),
+            ),
           ],
         ),
       );
     }
 
-    // pending
+    // ⏳ pending
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -252,16 +263,45 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.orange.shade200),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.hourglass_top, color: Colors.orange.shade700),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'طلب التحقق قيد المراجعة — انتظر موافقة المسؤول',
-              style: TextStyle(
-                  color: Colors.orange.shade700,
-                  fontWeight: FontWeight.w600),
+          Row(
+            children: [
+              Icon(Icons.hourglass_top, color: Colors.orange.shade700),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _hasUploadedDocs
+                      ? 'وثائقك قيد المراجعة — انتظر موافقة المسؤول'
+                      : 'لم يتم رفع الوثائق بعد — ارفع وثائقك للمراجعة',
+                  style: TextStyle(
+                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: Icon(
+                _hasUploadedDocs ? Icons.edit_document : Icons.upload_file,
+                color: const Color(0xFF1565C0),
+              ),
+              label: Text(
+                _hasUploadedDocs ? 'تحديث الوثائق' : 'رفع وثائق KYC',
+                style: const TextStyle(color: Color(0xFF1565C0)),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF1565C0)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => Navigator.pushNamed(
+                  context, AppRoutes.kycUpload)
+                  .then((_) => _loadUserData()),
             ),
           ),
         ],
@@ -295,8 +335,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                     color: color)),
             const SizedBox(height: 2),
             Text(title,
-                style: TextStyle(
-                    fontSize: 11, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 textAlign: TextAlign.center),
           ],
         ),
@@ -351,14 +390,22 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         children: [
           Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1565C0).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+              // صورة المنتج أو أيقونة
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: auction.imageUrl != null && auction.imageUrl!.isNotEmpty
+                    ? Image.network(auction.imageUrl!,
+                    width: 44, height: 44, fit: BoxFit.cover)
+                    : Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1565C0).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.gavel,
+                      color: Color(0xFF1565C0)),
                 ),
-                child: const Icon(Icons.gavel, color: Color(0xFF1565C0)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -379,8 +426,8 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -394,7 +441,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
             ],
           ),
 
-          // يوم المعاينة وتاريخ المزاد (بعد موافقة الأدمين)
+          // يوم المعاينة وتاريخ المزاد
           if (auction.inspectionDay != null || auction.startTime != null) ...[
             const SizedBox(height: 8),
             const Divider(height: 1),
@@ -405,11 +452,9 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                   const Icon(Icons.visibility,
                       size: 14, color: Colors.purple),
                   const SizedBox(width: 4),
-                  Text(
-                    'يوم المعاينة: ${_fmt(auction.inspectionDay)}',
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.purple),
-                  ),
+                  Text('يوم المعاينة: ${_fmt(auction.inspectionDay)}',
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.purple)),
                 ],
               ),
             if (auction.startTime != null) ...[
@@ -419,11 +464,9 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                   const Icon(Icons.calendar_today,
                       size: 14, color: Colors.green),
                   const SizedBox(width: 4),
-                  Text(
-                    'تاريخ المزاد: ${_fmt(auction.startTime)}',
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.green),
-                  ),
+                  Text('تاريخ المزاد: ${_fmt(auction.startTime)}',
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.green)),
                 ],
               ),
             ],
@@ -445,11 +488,9 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                       size: 14, color: Colors.orange),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(
-                      'ملاحظة المسؤول: ${auction.adminNote}',
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.orange),
-                    ),
+                    child: Text('ملاحظة المسؤول: ${auction.adminNote}',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.orange)),
                   ),
                 ],
               ),
@@ -463,8 +504,8 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
               icon: const Icon(Icons.arrow_forward_ios,
                   size: 14, color: Color(0xFF1565C0)),
               label: const Text('تتبع المزاد',
-                  style: TextStyle(
-                      color: Color(0xFF1565C0), fontSize: 13)),
+                  style:
+                  TextStyle(color: Color(0xFF1565C0), fontSize: 13)),
               onPressed: () => Navigator.pushNamed(
                 context,
                 AppRoutes.trackAuction,
