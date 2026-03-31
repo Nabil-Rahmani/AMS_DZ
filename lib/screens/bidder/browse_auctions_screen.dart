@@ -1,65 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/auction_model.dart';
-import '../bidder/bid_screen.dart';
-import 'package:intl/intl.dart';
-import 'dart:async';  // أضف هذا في أعلى الملف
+import 'bid_screen.dart';
 import 'auction_detail_screen.dart';
-
-class _SimpleCountdownTimer extends StatefulWidget {
-  final DateTime endTime;
-  const _SimpleCountdownTimer({required this.endTime});
-
-  @override
-  State<_SimpleCountdownTimer> createState() => _SimpleCountdownTimerState();
-}
-
-class _SimpleCountdownTimerState extends State<_SimpleCountdownTimer> {
-  late Timer _timer;
-  late Duration _duration;
-
-  @override
-  void initState() {
-    super.initState();
-    _updateDuration();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _updateDuration();
-      if (_duration.isNegative) _timer.cancel();
-    });
-  }
-
-  void _updateDuration() {
-    setState(() {
-      _duration = widget.endTime.difference(DateTime.now());
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_duration.isNegative) {
-      return const Text('Ended', style: TextStyle(color: Colors.red));
-    }
-
-    final hours = _duration.inHours.remainder(24);
-    final minutes = _duration.inMinutes.remainder(60);
-    final seconds = _duration.inSeconds.remainder(60);
-
-    return Text(
-      '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-      style: const TextStyle(
-        color: Colors.orange,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-}
+import 'dart:async';
 
 class BrowseAuctionsScreen extends StatefulWidget {
   const BrowseAuctionsScreen({super.key});
@@ -71,27 +16,29 @@ class BrowseAuctionsScreen extends StatefulWidget {
 class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _selectedCategory = 'All';
+  String _selectedCategory = 'الكل';
   String _selectedStatus = 'active';
 
   final List<String> _categories = [
-    'All', 'Electronics', 'Real Estate', 'Vehicles', 'Art', 'Jewelry', 'Other'
+    'الكل', 'عقارات', 'سيارات', 'إلكترونيات', 'أثاث', 'معدات صناعية', 'أخرى'
   ];
 
   final List<Map<String, String>> _statusOptions = [
-    {'label': 'Active', 'value': 'active'},
-    {'label': 'Upcoming', 'value': 'approved'},
-    {'label': 'Ended', 'value': 'ended'},
+    {'label': 'نشط', 'value': 'active'},
+    {'label': 'قادم', 'value': 'approved'},
+    {'label': 'منتهي', 'value': 'ended'},
   ];
 
   Stream<List<AuctionModel>> _auctionsStream() {
     Query query = FirebaseFirestore.instance
         .collection('auctions')
         .where('status', isEqualTo: _selectedStatus)
-        .orderBy('startTime', descending: false);
+        .orderBy('createdAt', descending: true);
 
-    return query.snapshots().map((snap) =>
-        snap.docs.map((doc) => AuctionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList());
+    return query.snapshots().map((snap) => snap.docs
+        .map((doc) =>
+        AuctionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .toList());
   }
 
   List<AuctionModel> _filterAuctions(List<AuctionModel> auctions) {
@@ -100,54 +47,60 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
           a.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           a.description.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesCategory =
-          _selectedCategory == 'All' || a.category == _selectedCategory;
+          _selectedCategory == 'الكل' || a.category == _selectedCategory;
       return matchesSearch && matchesCategory;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      appBar: AppBar(
-        title: const Text('Browse Auctions', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: 'My Bids',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MyBidsScreen()),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F6FA),
+        appBar: AppBar(
+          title: const Text('تصفح المزادات',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: const Color(0xFF1565C0),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: 'مزايداتي',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyBidsScreen()),
+              ),
             ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildSearchAndFilter(),
-          _buildStatusTabs(),
-          Expanded(child: _buildAuctionList()),
-        ],
+          ],
+        ),
+        body: Column(
+          children: [
+            _buildSearchAndFilter(),
+            _buildStatusTabs(),
+            Expanded(child: _buildAuctionList()),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSearchAndFilter() {
     return Container(
-      color: const Color(0xFF1A237E),
+      color: const Color(0xFF1565C0),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         children: [
           TextField(
             controller: _searchController,
             style: const TextStyle(color: Colors.white),
+            textDirection: TextDirection.rtl,
             decoration: InputDecoration(
-              hintText: 'Search auctions...',
+              hintText: 'ابحث عن مزاد...',
               hintStyle: const TextStyle(color: Colors.white60),
-              prefixIcon: const Icon(Icons.search, color: Colors.white60),
+              prefixIcon:
+              const Icon(Icons.search, color: Colors.white60),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
                 icon: const Icon(Icons.clear, color: Colors.white60),
@@ -180,19 +133,24 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
                   onTap: () => setState(() => _selectedCategory = cat),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: selected ? Colors.white : Colors.white.withOpacity(0.15),
+                      color: selected
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      cat,
-                      style: TextStyle(
-                        color: selected ? const Color(0xFF1A237E) : Colors.white,
-                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 13,
-                      ),
-                    ),
+                    child: Text(cat,
+                        style: TextStyle(
+                          color: selected
+                              ? const Color(0xFF1565C0)
+                              : Colors.white,
+                          fontWeight: selected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          fontSize: 13,
+                        )),
                   ),
                 );
               },
@@ -217,7 +175,9 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: selected ? const Color(0xFF1A237E) : Colors.transparent,
+                      color: selected
+                          ? const Color(0xFF1565C0)
+                          : Colors.transparent,
                       width: 3,
                     ),
                   ),
@@ -226,8 +186,12 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
                   s['label']!,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: selected ? const Color(0xFF1A237E) : Colors.grey,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    color: selected
+                        ? const Color(0xFF1565C0)
+                        : Colors.grey,
+                    fontWeight: selected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ),
@@ -246,7 +210,7 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(child: Text('خطأ: ${snapshot.error}'));
         }
         final all = snapshot.data ?? [];
         final auctions = _filterAuctions(all);
@@ -258,7 +222,9 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
               children: [
                 Icon(Icons.gavel, size: 64, color: Colors.grey[300]),
                 const SizedBox(height: 12),
-                Text('No auctions found', style: TextStyle(color: Colors.grey[500], fontSize: 16)),
+                Text('لا توجد مزادات',
+                    style: TextStyle(
+                        color: Colors.grey[500], fontSize: 16)),
               ],
             ),
           );
@@ -274,41 +240,59 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
   }
 }
 
-// ─── Auction Card ────────────────────────────────────────────────────────────
-
+// ─── بطاقة المزاد ────────────────────────────────────────────────────────────
 class _AuctionCard extends StatelessWidget {
-   final AuctionModel auction;
+  final AuctionModel auction;
   const _AuctionCard({required this.auction});
+
+  String _fmt(DateTime? d) {
+    if (d == null) return 'غير محدد';
+    return '${d.day}/${d.month}/${d.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final isActive = auction.status == AuctionStatus.active;
     final isEnded = auction.status == AuctionStatus.ended;
+    final isUpcoming = auction.status == AuctionStatus.approved;
 
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => AuctionDetailScreen(auctionId: auction.id!)),
+        MaterialPageRoute(
+            builder: (_) => AuctionDetailScreen(auctionId: auction.id)),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4))
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image placeholder
+            // صورة
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: auction.imageUrl != null && auction.imageUrl!.isNotEmpty
-                  ? Image.network(auction.imageUrl!, height: 160, width: double.infinity, fit: BoxFit.cover)
+              borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(16)),
+              child: auction.imageUrl != null &&
+                  auction.imageUrl!.isNotEmpty
+                  ? Image.network(auction.imageUrl!,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover)
                   : Container(
                 height: 160,
                 color: const Color(0xFFE8EAF6),
-                child: const Center(child: Icon(Icons.image, size: 48, color: Color(0xFF9FA8DA))),
+                child: const Center(
+                    child: Icon(Icons.image,
+                        size: 48, color: Color(0xFF9FA8DA))),
               ),
             ),
             Padding(
@@ -316,54 +300,99 @@ class _AuctionCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // الحالة والفئة
                   Row(
                     children: [
                       _StatusBadge(status: auction.status),
                       const Spacer(),
                       if (auction.category != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE8EAF6),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(auction.category!, style: const TextStyle(fontSize: 11, color: Color(0xFF3949AB))),
+                          child: Text(auction.category!,
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF3949AB))),
                         ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(auction.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+                  // العنوان
+                  Text(auction.title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 4),
-                  Text(
-                    auction.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                  ),
-                  const SizedBox(height: 12),
-                  // الجزء الخاص بالوقت والعد التنازلي
+                  Text(auction.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Colors.grey[600], fontSize: 13)),
+                  const SizedBox(height: 10),
+
+                  // السعر
                   Row(
                     children: [
-                      const Spacer(),
-                      if (isActive)
-                      // بدلاً من CountdownTimer
-                        if (auction.endDateTime != null)
-                          _SimpleCountdownTimer(endTime: auction.endDateTime!)
-                        else
-                          const Text('No end date'),
-                      if (isEnded)
-                        const Text(
-                          'Ended',
-                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                        ),
-                      if (!isActive && !isEnded)
-                        Text(
-                          'Starts: ${_formatDate(auction.startTime)}',
-                          style: const TextStyle(fontSize: 12, color: Colors.green),
-                        ),
+                      const Icon(Icons.attach_money,
+                          size: 16, color: Color(0xFF1565C0)),
+                      Text(
+                        'السعر الابتدائي: ${auction.effectiveStartingPrice.toStringAsFixed(0)} DZD',
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1565C0)),
+                      ),
                     ],
-                  )
-                 ,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // يوم المعاينة (للمزادات القادمة)
+                  if (isUpcoming && auction.inspectionDay != null) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.visibility,
+                            size: 14, color: Colors.purple),
+                        const SizedBox(width: 4),
+                        Text(
+                          'يوم المعاينة: ${_fmt(auction.inspectionDay)}',
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.purple),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+
+                  // الوقت
+                  Row(
+                    children: [
+                      if (isActive && auction.endDateTime != null) ...[
+                        const Icon(Icons.timer,
+                            size: 14, color: Colors.orange),
+                        const SizedBox(width: 4),
+                        _CountdownTimer(endTime: auction.endDateTime!),
+                      ],
+                      if (isEnded)
+                        const Text('منتهي',
+                            style: TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold)),
+                      if (isUpcoming && auction.startTime != null) ...[
+                        const Icon(Icons.calendar_today,
+                            size: 14, color: Colors.green),
+                        const SizedBox(width: 4),
+                        Text(
+                          'تاريخ المزاد: ${_fmt(auction.startTime)}',
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.green),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -372,16 +401,9 @@ class _AuctionCard extends StatelessWidget {
       ),
     );
   }
-
-
-   String _formatDate(DateTime? date) {
-     if (date == null) return 'Date not set';
-     return DateFormat('MMM dd, yyyy - hh:mm a').format(date);
-   }
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-
+// ─── Badge الحالة ─────────────────────────────────────────────────────────────
 class _StatusBadge extends StatelessWidget {
   final AuctionStatus status;
   const _StatusBadge({required this.status});
@@ -393,30 +415,35 @@ class _StatusBadge extends StatelessWidget {
     switch (status) {
       case AuctionStatus.active:
         color = Colors.green;
-        label = '● Live';
+        label = '● مباشر';
         break;
       case AuctionStatus.approved:
         color = Colors.orange;
-        label = '⏳ Upcoming';
+        label = '⏳ قادم';
         break;
       case AuctionStatus.ended:
         color = Colors.red;
-        label = 'Ended';
+        label = 'منتهي';
         break;
       default:
         color = Colors.grey;
-        label = status.name;
+        label = status.label;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20)),
+      child: Text(label,
+          style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold)),
     );
   }
 }
 
-// ─── Countdown Timer ──────────────────────────────────────────────────────────
-
+// ─── العد التنازلي ────────────────────────────────────────────────────────────
 class _CountdownTimer extends StatefulWidget {
   final DateTime endTime;
   const _CountdownTimer({required this.endTime});
@@ -427,44 +454,48 @@ class _CountdownTimer extends StatefulWidget {
 
 class _CountdownTimerState extends State<_CountdownTimer> {
   late Duration _remaining;
+  late Timer _timer;
 
   @override
   void initState() {
     super.initState();
     _updateRemaining();
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted) return false;
-      setState(_updateRemaining);
-      return _remaining.inSeconds > 0;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(_updateRemaining);
     });
   }
 
   void _updateRemaining() {
     _remaining = widget.endTime.difference(DateTime.now());
-    if (_remaining.isNegative) _remaining = Duration.zero;
+    if (_remaining.isNegative) {
+      _remaining = Duration.zero;
+      _timer.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (_remaining.inSeconds == 0) {
-      return const Text('Ended', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13));
+      return const Text('منتهي',
+          style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+              fontSize: 13));
     }
     final h = _remaining.inHours.toString().padLeft(2, '0');
     final m = (_remaining.inMinutes % 60).toString().padLeft(2, '0');
     final s = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
     final isUrgent = _remaining.inMinutes < 10;
-    return Row(
-      children: [
-        Icon(Icons.timer, size: 14, color: isUrgent ? Colors.red : Colors.grey[600]),
-        const SizedBox(width: 4),
-        Text('$h:$m:$s',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: isUrgent ? Colors.red : Colors.grey[700],
-            )),
-      ],
-    );
+    return Text('$h:$m:$s',
+        style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: isUrgent ? Colors.red : Colors.orange));
   }
 }

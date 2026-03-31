@@ -30,6 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+    dependencies:
+      image_picker: ^1.0.7
+      firebase_storage: ^11.6.0
 
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.0
@@ -91,4 +94,4 @@ flutter:
   #         weight: 700
   #
   # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+  # see https://flutter.dev/to/font-from-packdencies:irebase_storage: ^11.6.0

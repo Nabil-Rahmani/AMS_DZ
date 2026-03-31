@@ -1,12 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../models/auction_model.dart';
+
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   // ══════════════════════════════════════════════════════════════════
   // USERS
   // ══════════════════════════════════════════════════════════════════
-  /// Stream كل المستخدمين real-time
+
   Stream<List<UserModel>> streamAllUsers() {
     return _firestore
         .collection('users')
@@ -15,19 +17,17 @@ class FirestoreService {
         .map((snap) =>
         snap.docs.map((d) => UserModel.fromMap(d.data(), d.id)).toList());
   }
-  /// جلب مستخدم واحد
+
   Future<UserModel?> getUser(String uid) async {
     final doc = await _firestore.collection('users').doc(uid).get();
     if (!doc.exists) return null;
     return UserModel.fromMap(doc.data()!, doc.id);
   }
 
-  /// إنشاء مستخدم جديد في Firestore (بعد Firebase Auth)
   Future<void> createUser(UserModel user) async {
     await _firestore.collection('users').doc(user.id).set(user.toMap());
   }
 
-  /// تفعيل / تعطيل مستخدم
   Future<void> toggleUserStatus(String uid, bool isActive) async {
     await _firestore.collection('users').doc(uid).update({
       'isActive': isActive,
@@ -35,7 +35,6 @@ class FirestoreService {
     });
   }
 
-  /// تحديث بيانات مستخدم
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     await _firestore.collection('users').doc(uid).update({
       ...data,
@@ -44,22 +43,20 @@ class FirestoreService {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // KYC (Organizer Verification)
+  // KYC
   // ══════════════════════════════════════════════════════════════════
 
-  /// Stream المنظمين اللي لديهم طلب KYC pending
   Stream<List<UserModel>> streamPendingKyc() {
     return _firestore
         .collection('users')
         .where('role', isEqualTo: 'organizer')
-        .where('kycStatus', isEqualTo: 'pending')
+        .where('kycStatus', isEqualTo: KycStatus.pending.name)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) =>
         snap.docs.map((d) => UserModel.fromMap(d.data(), d.id)).toList());
   }
 
-  /// Stream كل المنظمين (بغض النظر عن KYC)
   Stream<List<UserModel>> streamAllOrganizers() {
     return _firestore
         .collection('users')
@@ -70,10 +67,9 @@ class FirestoreService {
         snap.docs.map((d) => UserModel.fromMap(d.data(), d.id)).toList());
   }
 
-  /// الموافقة على KYC
   Future<void> approveKyc(String uid) async {
     await _firestore.collection('users').doc(uid).update({
-      'kycStatus': 'approved',
+      'kycStatus': KycStatus.approved.name,
       'isVerified': true,
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -84,10 +80,9 @@ class FirestoreService {
     );
   }
 
-  /// رفض KYC مع سبب
   Future<void> rejectKyc(String uid, {required String reason}) async {
     await _firestore.collection('users').doc(uid).update({
-      'kycStatus': 'rejected',
+      'kycStatus': KycStatus.rejected.name,
       'isVerified': false,
       'kycRejectionReason': reason,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -103,10 +98,8 @@ class FirestoreService {
   // AUCTIONS
   // ══════════════════════════════════════════════════════════════════
 
-  /// Stream المزادات مع فلتر اختياري بالحالة
   Stream<List<AuctionModel>> streamAuctions({AuctionStatus? status}) {
-    Query<Map<String, dynamic>> query =
-    _firestore.collection('auctions');
+    Query<Map<String, dynamic>> query = _firestore.collection('auctions');
     if (status != null) {
       query = query.where('status', isEqualTo: status.name);
     }
@@ -117,13 +110,12 @@ class FirestoreService {
         snap.docs.map((d) => AuctionModel.fromMap(d.data(), d.id)).toList());
   }
 
-  /// إنشاء مزاد جديد
   Future<String> createAuction(AuctionModel auction) async {
     final ref = await _firestore.collection('auctions').add(auction.toMap());
     return ref.id;
   }
 
-  /// الموافقة على مزاد submitted → approved
+  /// الأدمين يوافق على المزاد فقط (بدون تحديد وقت بعد)
   Future<void> approveAuction(String auctionId) async {
     await _firestore.collection('auctions').doc(auctionId).update({
       'status': AuctionStatus.approved.name,
@@ -131,7 +123,55 @@ class FirestoreService {
     });
   }
 
-  /// رفض مزاد submitted → rejected
+  /// الأدمين يحدد جدول المزاد: يوم المعاينة + بداية + نهاية + يفعّله
+  Future<void> setAuctionSchedule({
+    required String auctionId,
+    required String organizerId,
+    required DateTime inspectionDay,
+    required DateTime startTime,
+    required DateTime endTime,
+  }) async {
+    await _firestore.collection('auctions').doc(auctionId).update({
+      'inspectionDay': Timestamp.fromDate(inspectionDay),
+      'startTime': Timestamp.fromDate(startTime),
+      'endTime': Timestamp.fromDate(endTime),
+      'status': AuctionStatus.approved.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    // إشعار للبائع
+    await _addNotification(
+      userId: organizerId,
+      auctionId: auctionId,
+      type: 'auction_scheduled',
+      message:
+      'تم تحديد موعد مزادك. يوم المعاينة: ${inspectionDay.day}/${inspectionDay.month}/${inspectionDay.year}، تاريخ المزاد: ${startTime.day}/${startTime.month}/${startTime.year}.',
+    );
+  }
+
+  /// الأدمين يعدّل السعر الابتدائي مع ملاحظة
+  Future<void> adjustAuctionPrice({
+    required String auctionId,
+    required String organizerId,
+    required double newPrice,
+    required String adminNote,
+  }) async {
+    await _firestore.collection('auctions').doc(auctionId).update({
+      'adminAdjustedPrice': newPrice,
+      'currentPrice': newPrice,
+      'adminNote': adminNote,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    // إشعار للبائع
+    await _addNotification(
+      userId: organizerId,
+      auctionId: auctionId,
+      type: 'price_adjusted',
+      message:
+      'قام المسؤول بتعديل السعر الابتدائي لمزادك إلى ${newPrice.toStringAsFixed(2)} DZD. السبب: $adminNote',
+    );
+  }
+
+  /// رفض مزاد
   Future<void> rejectAuction(String auctionId, {String? reason}) async {
     await _firestore.collection('auctions').doc(auctionId).update({
       'status': AuctionStatus.rejected.name,
@@ -140,7 +180,15 @@ class FirestoreService {
     });
   }
 
-  /// تحديد الفائز لمزاد منتهي
+  /// تفعيل مزاد approved → active (بعد ما يحدد الوقت)
+  Future<void> activateAuction(String auctionId) async {
+    await _firestore.collection('auctions').doc(auctionId).update({
+      'status': AuctionStatus.active.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// تحديد الفائز
   Future<void> declareWinner({
     required String auctionId,
     required String winnerId,
@@ -157,7 +205,6 @@ class FirestoreService {
     );
   }
 
-  /// جلب أعلى مزايدة لمزاد معين
   Future<Map<String, dynamic>?> getTopBid(String auctionId) async {
     final snap = await _firestore
         .collection('bids')
@@ -179,7 +226,7 @@ class FirestoreService {
       _firestore
           .collection('users')
           .where('role', isEqualTo: 'organizer')
-          .where('kycStatus', isEqualTo: 'pending')
+          .where('kycStatus', isEqualTo: KycStatus.pending.name)
           .count()
           .get(),
       _firestore
@@ -202,7 +249,7 @@ class FirestoreService {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // NOTIFICATIONS (private helper)
+  // NOTIFICATIONS
   // ══════════════════════════════════════════════════════════════════
 
   Future<void> _addNotification({

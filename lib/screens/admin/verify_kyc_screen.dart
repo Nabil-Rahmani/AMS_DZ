@@ -14,10 +14,10 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
   final FirestoreService _db = FirestoreService();
   late TabController _tabController;
 
-  final List<Map<String, String>> _tabs = [
-    {'label': 'بانتظار المراجعة', 'filter': 'pending'},
-    {'label': 'معتمدون', 'filter': 'approved'},
-    {'label': 'مرفوضون', 'filter': 'rejected'},
+  final List<Map<String, dynamic>> _tabs = [
+    {'label': 'بانتظار المراجعة', 'filter': KycStatus.pending},
+    {'label': 'معتمدون', 'filter': KycStatus.approved},
+    {'label': 'مرفوضون', 'filter': KycStatus.rejected},
   ];
 
   @override
@@ -32,20 +32,16 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
     super.dispose();
   }
 
-  // ── Streams ────────────────────────────────────────────────────────────────
-
-  Stream<List<UserModel>> _organizersStream(String kycStatus) {
+  Stream<List<UserModel>> _organizersStream(KycStatus filter) {
     return _db.streamAllOrganizers().map(
           (list) => list.where((u) {
-        if (kycStatus == 'pending') {
-          return u.kycStatus == 'pending' || u.kycStatus == null;
+        if (filter == KycStatus.pending) {
+          return u.kycStatus == KycStatus.pending || u.kycStatus == null;
         }
-        return u.kycStatus == kycStatus;
+        return u.kycStatus == filter;
       }).toList(),
     );
   }
-
-  // ── Actions ────────────────────────────────────────────────────────────────
 
   Future<void> _approve(UserModel user) async {
     final confirm = await _showConfirm(
@@ -93,18 +89,19 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
-            child:
-            const Text('رفض', style: TextStyle(color: Colors.white)),
+            child: const Text('رفض', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
     if (confirm != true) return;
     try {
-      await _db.rejectKyc(user.id,
-          reason: reasonCtrl.text.trim().isEmpty
-              ? 'لم يُذكر سبب'
-              : reasonCtrl.text.trim());
+      await _db.rejectKyc(
+        user.id,
+        reason: reasonCtrl.text.trim().isEmpty
+            ? 'لم يُذكر سبب'
+            : reasonCtrl.text.trim(),
+      );
       _showSnack('🚫 تم رفض طلب التوثيق');
     } catch (e) {
       _showSnack('❌ خطأ: $e', isError: true);
@@ -122,7 +119,6 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Row(
                 children: [
                   CircleAvatar(
@@ -156,10 +152,8 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
                 ],
               ),
               const Divider(height: 24),
-
-              _KycStatusBadge(status: user.kycStatus?.name),
+              KycStatusBadge(status: user.kycStatus),
               const SizedBox(height: 16),
-
               _DetailRow(
                   icon: Icons.email,
                   label: 'البريد الإلكتروني',
@@ -168,6 +162,10 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
                   icon: Icons.phone,
                   label: 'رقم الهاتف',
                   value: user.phone ?? 'غير محدد'),
+              _DetailRow(
+                  icon: Icons.business,
+                  label: 'نوع الحساب',
+                  value: user.accountType == 'company' ? 'شركة' : 'شخص طبيعي'),
               _DetailRow(
                   icon: Icons.location_on,
                   label: 'العنوان',
@@ -178,14 +176,14 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
                   value: user.createdAt != null
                       ? '${user.createdAt!.day}/${user.createdAt!.month}/${user.createdAt!.year}'
                       : 'غير محدد'),
-              if (user.kycStatus == 'rejected' &&
+              if (user.kycStatus == KycStatus.rejected &&
                   user.kycRejectionReason != null)
                 _DetailRow(
                     icon: Icons.info_outline,
                     label: 'سبب الرفض',
                     value: user.kycRejectionReason!),
 
-              // KYC Documents section
+              // وثائق KYC
               if (user.kycDocuments != null &&
                   user.kycDocuments!.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -202,11 +200,11 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
                             size: 16, color: Colors.blue),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: Text(e.key,
+                          child: Text(_docLabel(e.key),
                               style: const TextStyle(fontSize: 13)),
                         ),
                         TextButton(
-                          onPressed: () {/* open document URL */},
+                          onPressed: () {/* فتح الوثيقة */},
                           child: const Text('عرض'),
                         ),
                       ],
@@ -216,9 +214,8 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
               ],
 
               const SizedBox(height: 16),
-
-              // Actions
-              if (user.kycStatus == 'pending' || user.kycStatus == null)
+              if (user.kycStatus == KycStatus.pending ||
+                  user.kycStatus == null)
                 Row(
                   children: [
                     Expanded(
@@ -237,7 +234,8 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
                     const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton.icon(
-                        icon: const Icon(Icons.check, color: Colors.white),
+                        icon:
+                        const Icon(Icons.check, color: Colors.white),
                         label: const Text('قبول',
                             style: TextStyle(color: Colors.white)),
                         style: ElevatedButton.styleFrom(
@@ -257,7 +255,15 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
     );
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  String _docLabel(String key) {
+    switch (key) {
+      case 'national_id': return 'بطاقة التعريف الوطنية';
+      case 'commercial_register': return 'السجل التجاري';
+      case 'product_docs': return 'وثائق المنتج';
+      case 'no_lien_certificate': return 'شهادة عدم الرهن';
+      default: return key;
+    }
+  }
 
   Future<bool> _showConfirm({
     required String title,
@@ -294,8 +300,6 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
     ));
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -303,8 +307,8 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
       child: Scaffold(
         appBar: AppBar(
           title: const Text('التحقق من هوية المنظمين',
-              style: TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold)),
+              style:
+              TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           backgroundColor: const Color(0xFF1565C0),
           iconTheme: const IconThemeData(color: Colors.white),
           bottom: TabBar(
@@ -312,17 +316,15 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
             indicatorColor: Colors.white,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
-            tabs: _tabs
-                .map((t) => Tab(text: t['label']!))
-                .toList(),
+            tabs: _tabs.map((t) => Tab(text: t['label'] as String)).toList(),
           ),
         ),
         body: TabBarView(
           controller: _tabController,
           children: _tabs.map((t) {
             return _OrganizerListView(
-              stream: _organizersStream(t['filter']!),
-              filter: t['filter']!,
+              stream: _organizersStream(t['filter'] as KycStatus),
+              filter: t['filter'] as KycStatus,
               onTap: _showOrganizerDetails,
               onApprove: _approve,
               onReject: _reject,
@@ -334,13 +336,13 @@ class _VerifyKycScreenState extends State<VerifyKycScreen>
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // WIDGETS
-// ══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 
 class _OrganizerListView extends StatelessWidget {
   final Stream<List<UserModel>> stream;
-  final String filter;
+  final KycStatus filter;
   final void Function(UserModel) onTap;
   final void Function(UserModel) onApprove;
   final void Function(UserModel) onReject;
@@ -374,7 +376,7 @@ class _OrganizerListView extends StatelessWidget {
                     size: 64, color: Colors.grey[400]),
                 const SizedBox(height: 12),
                 Text(
-                  filter == 'pending'
+                  filter == KycStatus.pending
                       ? 'لا توجد طلبات بانتظار المراجعة'
                       : 'لا توجد سجلات',
                   style: const TextStyle(color: Colors.grey),
@@ -414,13 +416,12 @@ class _KycCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPending =
-        user.kycStatus == 'pending' || user.kycStatus == null;
+        user.kycStatus == KycStatus.pending || user.kycStatus == null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      shape:
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
@@ -434,12 +435,9 @@ class _KycCard extends StatelessWidget {
                   CircleAvatar(
                     backgroundColor: Colors.blue.withOpacity(0.1),
                     child: Text(
-                      user.name.isNotEmpty
-                          ? user.name[0].toUpperCase()
-                          : '?',
+                      user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue),
+                          fontWeight: FontWeight.bold, color: Colors.blue),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -449,27 +447,39 @@ class _KycCard extends StatelessWidget {
                       children: [
                         Text(user.name,
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15)),
+                                fontWeight: FontWeight.bold, fontSize: 15)),
                         Text(user.email,
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 12)),
                       ],
                     ),
                   ),
-                  _KycStatusBadge(status: user.kycStatus?.name),
+                  KycStatusBadge(status: user.kycStatus),
                 ],
               ),
-              if (user.phone != null) ...[
-                const SizedBox(height: 8),
+              if (user.accountType != null) ...[
+                const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.phone,
-                        size: 14, color: Colors.grey),
+                    const Icon(Icons.business, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      user.accountType == 'company' ? 'شركة' : 'شخص طبيعي',
+                      style:
+                      const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
+              if (user.phone != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.phone, size: 14, color: Colors.grey),
                     const SizedBox(width: 4),
                     Text(user.phone!,
-                        style: const TextStyle(
-                            fontSize: 13, color: Colors.grey)),
+                        style:
+                        const TextStyle(fontSize: 13, color: Colors.grey)),
                   ],
                 ),
               ],
@@ -482,8 +492,8 @@ class _KycCard extends StatelessWidget {
                         icon: const Icon(Icons.close,
                             size: 16, color: Colors.red),
                         label: const Text('رفض',
-                            style: TextStyle(
-                                color: Colors.red, fontSize: 13)),
+                            style:
+                            TextStyle(color: Colors.red, fontSize: 13)),
                         style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Colors.red),
                             padding:
@@ -517,20 +527,20 @@ class _KycCard extends StatelessWidget {
   }
 }
 
-class _KycStatusBadge extends StatelessWidget {
-  final String? status;
-  const _KycStatusBadge({this.status});
+class KycStatusBadge extends StatelessWidget {
+  final KycStatus? status;
+  const KycStatusBadge({super.key, this.status});
 
   @override
   Widget build(BuildContext context) {
     Color color;
     String label;
     switch (status) {
-      case 'approved':
+      case KycStatus.approved:
         color = Colors.green;
         label = 'معتمد ✅';
         break;
-      case 'rejected':
+      case KycStatus.rejected:
         color = Colors.red;
         label = 'مرفوض ❌';
         break;
@@ -547,9 +557,7 @@ class _KycStatusBadge extends StatelessWidget {
       ),
       child: Text(label,
           style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600)),
+              color: color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }

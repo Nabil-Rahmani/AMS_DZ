@@ -10,6 +10,8 @@ import '../screens/bidder/bid_screen.dart';
 import '../data/models/auction_model.dart';
 import '../screens/organizer/track_auction_screen.dart';
 import '../screens/bidder/browse_auctions_screen.dart';
+import '../screens/auth/register_screen.dart';
+
 class AppRoutes {
   // Route names
   static const String login = '/login';
@@ -22,10 +24,18 @@ class AppRoutes {
   static const String trackAuction = '/organizer/track-auction';
   static const String browseAuctions = '/bidder/browse';
   static const String bidScreen = '/bidder/bid';
+  static const String register='/register';
+  static const String bidderDashboard='/bidder/dashboard';
+
 
   // Route generator
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case register:
+        return _route(const RegisterScreen());
+        case bidderDashboard:
+        return _route(const MyBidsScreen());
+
       case login:
         return _route(const LoginScreen());
 
@@ -64,7 +74,10 @@ class AppRoutes {
     }
   }
 
-  static MaterialPageRoute _route(Widget page) {
-    return MaterialPageRoute(builder: (_) => page);
+  static Route<dynamic> _route(Widget page) {
+    return MaterialPageRoute(
+      builder: (_) => page,
+    );
   }
+
 }

@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/auction_model.dart';
 import '../../data/models/bid_model.dart';
-import 'package:intl/intl.dart';
+
 
 class AuctionDetailScreen extends StatefulWidget {
   final String auctionId;
@@ -40,14 +40,14 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
   Future<void> _placeBid(AuctionModel auction) async {
     setState(() => _bidError = null);
     final raw = _bidController.text.trim();
-    final amount = double.tryParse(raw);
+    double? amount = double.tryParse(raw);
 
     if (amount == null) {
       setState(() => _bidError = 'Please enter a valid amount.');
       return;
     }
-    if (amount <= auction.currentPrice) {
-      setState(() => _bidError = 'Bid must be higher than current price (${auction.currentPrice.toStringAsFixed(2)} DZD).');
+    if (amount <= (auction.currentPrice ?? 0)) {
+      setState(() => _bidError = 'Bid must be higher than current price (${auction.currentPrice?.toStringAsFixed(2)} DZD).');
       return;
     }
 
@@ -203,7 +203,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
               const SizedBox(width: 12),
               _InfoTile(
                 label: 'Current Bid',
-                value: '${auction.currentPrice.toStringAsFixed(2)} DZD',
+                value: '${auction.currentPrice?.toStringAsFixed(2)} DZD',
                 highlight: true,
               ),
             ],

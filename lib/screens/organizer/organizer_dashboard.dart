@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/auction_model.dart';
+import '../../data/models/user_model.dart';
 import '../../routes/app_routes.dart';
 
 class OrganizerDashboard extends StatefulWidget {
@@ -15,7 +16,8 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
-  String _kycStatus = 'pending';
+  KycStatus? _kycStatus;
+  String? _kycRejectionReason;
   int _totalAuctions = 0;
   int _activeAuctions = 0;
   double _totalRevenue = 0;
@@ -32,8 +34,10 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
 
     final userDoc = await _firestore.collection('users').doc(uid).get();
     if (userDoc.exists) {
+      final data = userDoc.data()!;
       setState(() {
-        _kycStatus = userDoc.data()?['kycStatus'] ?? 'pending';
+        _kycStatus = _parseKyc(data['kycStatus']);
+        _kycRejectionReason = data['kycRejectionReason'];
       });
     }
 
@@ -46,8 +50,11 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     int active = 0;
     for (var doc in auctionsSnap.docs) {
       final data = doc.data();
-      if (data['status'] == 'active') active++;
-      revenue += (data['currentPrice'] ?? data['startingPrice'] ?? 0).toDouble();
+      if (data['status'] == AuctionStatus.active.name) active++;
+      if (data['status'] == AuctionStatus.ended.name) {
+        revenue +=
+            (data['currentPrice'] ?? data['startingPrice'] ?? 0).toDouble();
+      }
     }
 
     setState(() {
@@ -57,121 +64,134 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     });
   }
 
+  KycStatus? _parseKyc(dynamic val) {
+    if (val == null) return KycStatus.pending;
+    switch (val.toString()) {
+      case 'approved': return KycStatus.approved;
+      case 'rejected': return KycStatus.rejected;
+      default: return KycStatus.pending;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = _auth.currentUser?.uid;
-    final kycApproved = _kycStatus == 'approved';
+    final kycApproved = _kycStatus == KycStatus.approved;
 
     return Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF1565C0),
-          title: const Text('Organizer Dashboard',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.white),
-              onPressed: () async {
-                await _auth.signOut();
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, AppRoutes.login);
-                }
-              },
-            ),
-          ],
-        ),
-        body: RefreshIndicator(
-            onRefresh: _loadUserData,
-            child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                    // KYC Banner
-                    _buildKycBanner(kycApproved),
-                const SizedBox(height: 16),
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1565C0),
+        title: const Text('لوحة تحكم البائع',
+            style:
+            TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await _auth.signOut();
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, AppRoutes.login);
+              }
+            },
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadUserData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── KYC Banner ───────────────────────────────
+              _buildKycBanner(),
+              const SizedBox(height: 16),
 
-                // Stats Row
-                Row(
-                  children: [
-                    _buildStatCard('Total Auctions', _totalAuctions.toString(),
-                        Icons.gavel, Colors.blue),
-                    const SizedBox(width: 12),
-                    _buildStatCard('Active', _activeAuctions.toString(),
-                        Icons.play_circle, Colors.green),
-                    const SizedBox(width: 12),
-                    _buildStatCard('Revenue',
-                        '\$${_totalRevenue.toStringAsFixed(0)}',
-                        Icons.attach_money, Colors.orange),
-                  ],
+              // ── الإحصائيات ───────────────────────────────
+              Row(
+                children: [
+                  _buildStatCard('إجمالي المزادات',
+                      _totalAuctions.toString(), Icons.gavel, Colors.blue),
+                  const SizedBox(width: 12),
+                  _buildStatCard('النشطة',
+                      _activeAuctions.toString(), Icons.play_circle, Colors.green),
+                  const SizedBox(width: 12),
+                  _buildStatCard('الإيرادات',
+                      '${_totalRevenue.toStringAsFixed(0)} DZD',
+                      Icons.attach_money, Colors.orange),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // ── قائمة المزادات ───────────────────────────
+              const Text('مزاداتي',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1565C0))),
+              const SizedBox(height: 10),
+
+              if (uid != null)
+                StreamBuilder<QuerySnapshot>(
+                  stream: _firestore
+                      .collection('auctions')
+                      .where('organizerId', isEqualTo: uid)
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData ||
+                        snapshot.data!.docs.isEmpty) {
+                      return Center(
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 40),
+                            Icon(Icons.inbox_outlined,
+                                size: 64, color: Colors.grey.shade400),
+                            const SizedBox(height: 8),
+                            Text('لا توجد مزادات بعد',
+                                style:
+                                TextStyle(color: Colors.grey.shade500)),
+                          ],
+                        ),
+                      );
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: snapshot.data!.docs.length,
+                      itemBuilder: (context, index) {
+                        final doc = snapshot.data!.docs[index];
+                        final auction = AuctionModel.fromMap(
+                            doc.data() as Map<String, dynamic>, doc.id);
+                        return _buildAuctionCard(auction);
+                      },
+                    );
+                  },
                 ),
-                const SizedBox(height: 20),
-
-                // Auctions List
-                const Text('My Auctions',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold,
-                        color: Color(0xFF1565C0))),
-                const SizedBox(height: 10),
-
-                if (uid != null)
-            StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('auctions')
-            .where('organizerId', isEqualTo: uid)
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
-                Icon(Icons.inbox_outlined,
-                    size: 64, color: Colors.grey.shade400),
-                const SizedBox(height: 8),
-                Text('No auctions yet',
-                    style: TextStyle(color: Colors.grey.shade500)),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
-            final doc = snapshot.data!.docs[index];
-            final auction = AuctionModel.fromMap(
-                doc.data() as Map<String, dynamic>, doc.id);
-            return _buildAuctionCard(auction);
-          },
-        );
-        },
-            ),
-                    ],
-                ),
-            ),
+            ],
+          ),
         ),
+      ),
       floatingActionButton: kycApproved
           ? FloatingActionButton.extended(
         onPressed: () =>
             Navigator.pushNamed(context, AppRoutes.submitAuction),
         backgroundColor: const Color(0xFF1565C0),
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New Auction',
+        label: const Text('مزاد جديد',
             style: TextStyle(color: Colors.white)),
       )
           : null,
     );
   }
 
-  Widget _buildKycBanner(bool approved) {
-    if (approved) {
+  Widget _buildKycBanner() {
+    if (_kycStatus == KycStatus.approved) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -183,14 +203,48 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           children: [
             Icon(Icons.verified, color: Colors.green.shade700),
             const SizedBox(width: 8),
-            Text('KYC Verified — You can post auctions',
+            Text('تم التحقق من هويتك ✅ — يمكنك نشر المزادات',
                 style: TextStyle(
-                    color: Colors.green.shade700, fontWeight: FontWeight.w600)),
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w600)),
           ],
         ),
       );
     }
 
+    if (_kycStatus == KycStatus.rejected) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.red.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.cancel, color: Colors.red.shade700),
+                const SizedBox(width: 8),
+                Text('تم رفض طلب التحقق ❌',
+                    style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+            if (_kycRejectionReason != null) ...[
+              const SizedBox(height: 4),
+              Text('السبب: $_kycRejectionReason',
+                  style: TextStyle(
+                      color: Colors.red.shade600, fontSize: 12)),
+            ],
+          ],
+        ),
+      );
+    }
+
+    // pending
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -200,15 +254,14 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+          Icon(Icons.hourglass_top, color: Colors.orange.shade700),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              _kycStatus == 'rejected'
-                  ? 'KYC Rejected — Contact support'
-                  : 'KYC Pending — Awaiting admin approval',
+              'طلب التحقق قيد المراجعة — انتظر موافقة المسؤول',
               style: TextStyle(
-                  color: Colors.orange.shade700, fontWeight: FontWeight.w600),
+                  color: Colors.orange.shade700,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -219,53 +272,65 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   Widget _buildStatCard(
       String title, String value, IconData icon, Color color) {
     return Expanded(
-        child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2))
-              ],
-            ),
-            child: Column(
-                children: [
-                Icon(icon, color: color, size: 28),
-            const SizedBox(height: 6),
-            Text(value,style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color)),
-                  Text(title,
-                      style:
-                      TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                      textAlign: TextAlign.center),
-                ],
-            ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2))
+          ],
         ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 6),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: color)),
+            const SizedBox(height: 2),
+            Text(title,
+                style: TextStyle(
+                    fontSize: 11, color: Colors.grey.shade600),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildAuctionCard(AuctionModel auction) {
     Color statusColor;
+    String statusLabel;
     switch (auction.status) {
       case AuctionStatus.active:
         statusColor = Colors.green;
+        statusLabel = 'نشط';
         break;
       case AuctionStatus.approved:
         statusColor = Colors.blue;
+        statusLabel = 'مقبول';
         break;
       case AuctionStatus.rejected:
         statusColor = Colors.red;
+        statusLabel = 'مرفوض';
         break;
       case AuctionStatus.ended:
         statusColor = Colors.grey;
+        statusLabel = 'منتهي';
+        break;
+      case AuctionStatus.submitted:
+        statusColor = Colors.orange;
+        statusLabel = 'قيد المراجعة';
         break;
       default:
         statusColor = Colors.orange;
+        statusLabel = 'مسودة';
     }
 
     return Container(
@@ -276,62 +341,144 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 6,
               offset: const Offset(0, 2))
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1565C0).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.gavel, color: Color(0xFF1565C0)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(auction.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 4),
-                Text(
-                    'Starting: \$${auction.startingPrice.toStringAsFixed(0)}',
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1565C0).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.gavel, color: Color(0xFF1565C0)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(auction.title,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'السعر: ${auction.effectiveStartingPrice.toStringAsFixed(0)} DZD'
+                          '${auction.adminAdjustedPrice != null ? ' (معدّل)' : ''}',
+                      style: TextStyle(
+                          color: Colors.grey.shade600, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(statusLabel,
                     style: TextStyle(
-                        color: Colors.grey.shade600, fontSize: 13)),
-              ],
-            ),
+                        color: statusColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
-          Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
+
+          // يوم المعاينة وتاريخ المزاد (بعد موافقة الأدمين)
+          if (auction.inspectionDay != null || auction.startTime != null) ...[
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            if (auction.inspectionDay != null)
+              Row(
+                children: [
+                  const Icon(Icons.visibility,
+                      size: 14, color: Colors.purple),
+                  const SizedBox(width: 4),
+                  Text(
+                    'يوم المعاينة: ${_fmt(auction.inspectionDay)}',
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.purple),
+                  ),
+                ],
+              ),
+            if (auction.startTime != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today,
+                      size: 14, color: Colors.green),
+                  const SizedBox(width: 4),
+                  Text(
+                    'تاريخ المزاد: ${_fmt(auction.startTime)}',
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.green),
+                  ),
+                ],
+              ),
+            ],
+          ],
+
+          // ملاحظة الأدمين على السعر
+          if (auction.adminNote != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline,
+                      size: 14, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'ملاحظة المسؤول: ${auction.adminNote}',
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.orange),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Text(
-              auction.status.name.toUpperCase(),
-              style: TextStyle(
-                  color: statusColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold),
+          ],
+
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              icon: const Icon(Icons.arrow_forward_ios,
+                  size: 14, color: Color(0xFF1565C0)),
+              label: const Text('تتبع المزاد',
+                  style: TextStyle(
+                      color: Color(0xFF1565C0), fontSize: 13)),
+              onPressed: () => Navigator.pushNamed(
+                context,
+                AppRoutes.trackAuction,
+                arguments: auction,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.arrow_forward_ios,
-                size: 16, color: Color(0xFF1565C0)),
-            onPressed: () => Navigator.pushNamed(
-                context, AppRoutes.trackAuction),
           ),
         ],
       ),
     );
+  }
+
+  String _fmt(DateTime? d) {
+    if (d == null) return 'غير محدد';
+    return '${d.day}/${d.month}/${d.year}';
   }
 }

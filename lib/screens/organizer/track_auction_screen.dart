@@ -148,7 +148,7 @@ class _TrackAuctionScreenState extends State<TrackAuctionScreen>
             children: [
               _headerStat(
                 'السعر الحالي',
-                '${widget.auction.currentPrice.toStringAsFixed(0)} DZD',
+                '${widget.auction.currentPrice?.toStringAsFixed(0)} DZD',
                 Icons.price_change_rounded,
                 const Color(0xFF1565C0),
               ),
@@ -220,7 +220,7 @@ class _TrackAuctionScreenState extends State<TrackAuctionScreen>
           _detailRow('السعر الابتدائي',
               '${a.startingPrice.toStringAsFixed(0)} DZD'),
           _detailRow('السعر الحالي',
-              '${a.currentPrice.toStringAsFixed(0)} DZD'),
+              '${a.currentPrice?.toStringAsFixed(0)} DZD'),
           _detailRow('الحد الأدنى للزيادة',
               '${a.minBidIncrement?.toStringAsFixed(0) } DZD'),
         ]),
@@ -528,7 +528,7 @@ class _TrackAuctionScreenState extends State<TrackAuctionScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      'السعر الفائز: ${widget.auction.currentPrice.toStringAsFixed(0)} DZD',
+                      'السعر الفائز: ${widget.auction.currentPrice?.toStringAsFixed(0)} DZD',
                       style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -544,7 +544,7 @@ class _TrackAuctionScreenState extends State<TrackAuctionScreen>
               _detailCard('📄 تفاصيل المزايدة الفائزة', [
                 _detailRow('رقم المزايدة', winnerBidId),
                 _detailRow('المبلغ',
-                    '${widget.auction.currentPrice.toStringAsFixed(0)} DZD'),
+                    '${widget.auction.currentPrice?.toStringAsFixed(0)} DZD'),
               ]),
             ],
           ],

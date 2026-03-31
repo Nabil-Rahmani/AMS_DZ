@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// تعريف الـ enums (يمكن نقلهما لملف منفصل)
 enum UserRole { admin, organizer, bidder }
 enum KycStatus { pending, approved, rejected }
 
@@ -10,17 +9,18 @@ class UserModel {
   final String email;
   final UserRole role;
   final bool isActive;
-  final DateTime? createdAt; // nullable لأن قد لا يكون موجوداً عند الإنشاء
+  final DateTime? createdAt;
 
-  // KYC
+  // KYC (للمنظمين فقط)
   final KycStatus? kycStatus;
   final bool isVerified;
   final String? kycRejectionReason;
-  final Map<String, String>? kycDocuments;
+  final Map<String, String>? kycDocuments; // {'national_id': 'url', 'commercial_register': 'url', ...}
 
   // معلومات إضافية
   final String? phone;
   final String? address;
+  final String? accountType; // 'individual' | 'company'
 
   const UserModel({
     required this.id,
@@ -35,9 +35,9 @@ class UserModel {
     this.kycDocuments,
     this.phone,
     this.address,
+    this.accountType,
   });
 
-  // --- fromMap (للاستخدام مع البيانات العادية) ---
   factory UserModel.fromMap(Map<String, dynamic> map, String id) {
     return UserModel(
       id: id,
@@ -48,7 +48,7 @@ class UserModel {
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()
-          : DateTime.tryParse(map['createdAt']))
+          : DateTime.tryParse(map['createdAt'].toString()))
           : null,
       kycStatus: _parseKycStatus(map['kycStatus']),
       isVerified: map['isVerified'] ?? false,
@@ -58,10 +58,15 @@ class UserModel {
           : null,
       phone: map['phone'],
       address: map['address'],
+      accountType: map['accountType'],
     );
   }
 
-  // --- toMap (للتخزين في Firestore أو أي قاعدة بيانات) ---
+  factory UserModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return UserModel.fromMap(data, doc.id);
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -75,31 +80,10 @@ class UserModel {
       if (kycDocuments != null) 'kycDocuments': kycDocuments,
       if (phone != null) 'phone': phone,
       if (address != null) 'address': address,
+      if (accountType != null) 'accountType': accountType,
     };
   }
 
-  // --- fromFirestore (لقراءة البيانات من Firestore مباشرة) ---
-  factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return UserModel(
-      id: doc.id,
-      name: data['name'] ?? '',
-      email: data['email'] ?? '',
-      role: _parseUserRole(data['role']),
-      isActive: data['isActive'] ?? true,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      kycStatus: _parseKycStatus(data['kycStatus']),
-      isVerified: data['isVerified'] ?? false,
-      kycRejectionReason: data['kycRejectionReason'],
-      kycDocuments: data['kycDocuments'] != null
-          ? Map<String, String>.from(data['kycDocuments'])
-          : null,
-      phone: data['phone'],
-      address: data['address'],
-    );
-  }
-
-  // --- copyWith (لتعديل نسخة مع الاحتفاظ بالباقي) ---
   UserModel copyWith({
     String? name,
     String? email,
@@ -112,6 +96,7 @@ class UserModel {
     Map<String, String>? kycDocuments,
     String? phone,
     String? address,
+    String? accountType,
   }) {
     return UserModel(
       id: id,
@@ -126,37 +111,34 @@ class UserModel {
       kycDocuments: kycDocuments ?? this.kycDocuments,
       phone: phone ?? this.phone,
       address: address ?? this.address,
+      accountType: accountType ?? this.accountType,
     );
   }
+
+  // Helpers
+  bool get isAdmin => role == UserRole.admin;
+  bool get isOrganizer => role == UserRole.organizer;
+  bool get isBidder => role == UserRole.bidder;
+  bool get kycApproved => kycStatus == KycStatus.approved;
+  bool get kycPending => kycStatus == KycStatus.pending;
+  bool get kycRejected => kycStatus == KycStatus.rejected;
 }
 
-// دوال مساعدة لتحويل String إلى Enum
 UserRole _parseUserRole(dynamic value) {
   if (value == null) return UserRole.bidder;
-  if (value is UserRole) return value;
-  final String roleStr = value.toString();
-  switch (roleStr) {
-    case 'admin':
-      return UserRole.admin;
-    case 'organizer':
-      return UserRole.organizer;
-    default:
-      return UserRole.bidder;
+  switch (value.toString()) {
+    case 'admin': return UserRole.admin;
+    case 'organizer': return UserRole.organizer;
+    default: return UserRole.bidder;
   }
 }
 
 KycStatus? _parseKycStatus(dynamic value) {
   if (value == null) return null;
-  if (value is KycStatus) return value;
-  final String statusStr = value.toString();
-  switch (statusStr) {
-    case 'pending':
-      return KycStatus.pending;
-    case 'approved':
-      return KycStatus.approved;
-    case 'rejected':
-      return KycStatus.rejected;
-    default:
-      return null;
+  switch (value.toString()) {
+    case 'pending': return KycStatus.pending;
+    case 'approved': return KycStatus.approved;
+    case 'rejected': return KycStatus.rejected;
+    default: return null;
   }
 }

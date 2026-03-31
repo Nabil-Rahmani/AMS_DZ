@@ -176,7 +176,7 @@ class _AuctionBidGroup extends StatelessWidget {
                       _SmallTile(label: 'Your Highest Bid', value: '${highestBid.toStringAsFixed(2)} DZD', highlight: true),
                       const SizedBox(width: 12),
                       if (auction != null)
-                        _SmallTile(label: 'Current Price', value: '${auction!.currentPrice.toStringAsFixed(2)} DZD'),
+                        _SmallTile(label: 'Current Price', value: '${auction!.currentPrice?.toStringAsFixed(2)} DZD'),
                     ],
                   ),
                   const SizedBox(height: 12),
