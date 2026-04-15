@@ -1,0 +1,36 @@
+name: auction_app2
+description: A new Flutter project.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^2.27.0
+  firebase_auth: ^4.17.0
+  cloud_firestore: ^4.15.0
+  firebase_storage: ^11.6.0
+
+  # Image Picker
+  image_picker: ^1.0.7
+
+  # UI & Utils
+  cupertino_icons: ^1.0.8
+  intl: ^0.20.2
+  flutter_countdown_timer: ^4.1.0
+  flutter_animate: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
