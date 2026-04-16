@@ -185,8 +185,8 @@ class _OrganizerDashboardHomeState extends State<OrganizerDashboardHome>
                           contentPadding: const EdgeInsets.symmetric(vertical: 10),
                           suffixIcon: _searchQuery.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.close_rounded, size: 18, color: DS.textMuted),
-                                  onPressed: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); })
+                              icon: const Icon(Icons.close_rounded, size: 18, color: DS.textMuted),
+                              onPressed: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); })
                               : null,
                         ),
                         onChanged: (v) => setState(() => _searchQuery = v),
@@ -203,114 +203,114 @@ class _OrganizerDashboardHomeState extends State<OrganizerDashboardHome>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                      FadeSlideIn(
-                        delay: const Duration(milliseconds: 100),
-                        child: _buildKycBanner(),
-                      ),
-                      const SizedBox(height: 24),
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 100),
+                      child: _buildKycBanner(),
+                    ),
+                    const SizedBox(height: 24),
 
-                      FadeSlideIn(
-                        delay: const Duration(milliseconds: 200),
-                        child: Row(children: [
-                          Expanded(child: StatMiniCard(
-                            icon: Icons.gavel_rounded,
-                            label: 'إجمالي',
-                            value: _totalAuctions.toString(),
-                            color: DS.purple,
-                          )),
-                          const SizedBox(width: 10),
-                          Expanded(child: StatMiniCard(
-                            icon: Icons.play_circle_rounded,
-                            label: 'نشط',
-                            value: _activeAuctions.toString(),
-                            color: DS.success,
-                          )),
-                          const SizedBox(width: 10),
-                          Expanded(child: StatMiniCard(
-                            icon: Icons.payments_rounded,
-                            label: 'إيراد',
-                            value: _totalRevenue > 0
-                                ? '${(_totalRevenue / 1000).toStringAsFixed(1)}K'
-                                : '0',
-                            color: DS.gold,
-                          )),
-                        ]),
-                      ),
-                      const SizedBox(height: 28),
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 200),
+                      child: Row(children: [
+                        Expanded(child: StatMiniCard(
+                          icon: Icons.gavel_rounded,
+                          label: 'إجمالي',
+                          value: _totalAuctions.toString(),
+                          color: DS.purple,
+                        )),
+                        const SizedBox(width: 10),
+                        Expanded(child: StatMiniCard(
+                          icon: Icons.play_circle_rounded,
+                          label: 'نشط',
+                          value: _activeAuctions.toString(),
+                          color: DS.success,
+                        )),
+                        const SizedBox(width: 10),
+                        Expanded(child: StatMiniCard(
+                          icon: Icons.payments_rounded,
+                          label: 'إيراد',
+                          value: _totalRevenue > 0
+                              ? '${(_totalRevenue / 1000).toStringAsFixed(1)}K'
+                              : '0',
+                          color: DS.gold,
+                        )),
+                      ]),
+                    ),
+                    const SizedBox(height: 28),
 
-                      FadeSlideIn(
-                        delay: const Duration(milliseconds: 300),
-                        child: const DSSection(title: 'مزاداتي'),
-                      ),
-                      const SizedBox(height: 14),
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 300),
+                      child: const DSSection(title: 'مزاداتي'),
+                    ),
+                    const SizedBox(height: 14),
 
-                      if (uid != null)
-                        StreamBuilder<QuerySnapshot>(
-                          stream: _db.collection('auctions')
-                              .where('organizerId', isEqualTo: uid)
-                              .orderBy('createdAt', descending: true)
-                              .snapshots(),
-                          builder: (ctx, snap) {
-                            if (snap.connectionState == ConnectionState.waiting) {
-                              return const Padding(
-                                padding: EdgeInsets.only(top: 60),
-                                child: Center(child: CircularProgressIndicator(color: DS.purple)),
-                              );
-                            }
-                            if (!snap.hasData || snap.data!.docs.isEmpty) {
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 40),
-                                child: DSEmpty(
-                                  icon: Icons.gavel_rounded,
-                                  title: 'لا توجد مزادات',
-                                  subtitle: kycOk ? 'اضغط + لإضافة مزاد' : 'أكمل KYC أولاً',
-                                ),
-                              );
-                            }
-                            return StaggeredListView(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: snap.data!.docs.length,
-                              padding: EdgeInsets.zero,
-                              itemBuilder: (_, i) {
-                                final doc = snap.data!.docs[i];
-                                final data = doc.data() as Map<String, dynamic>;
-                                final auction = AuctionModel.fromMap(data, doc.id);
-                                
-                                if (_searchQuery.isNotEmpty && 
-                                    !auction.title.toLowerCase().contains(_searchQuery.toLowerCase())) {
-                                  return const SizedBox.shrink();
-                                }
-                                
-                                return _buildAuctionCard(auction);
-                              },
+                    if (uid != null)
+                      StreamBuilder<QuerySnapshot>(
+                        stream: _db.collection('auctions')
+                            .where('organizerId', isEqualTo: uid)
+                            .orderBy('createdAt', descending: true)
+                            .snapshots(),
+                        builder: (ctx, snap) {
+                          if (snap.connectionState == ConnectionState.waiting) {
+                            return const Padding(
+                              padding: EdgeInsets.only(top: 60),
+                              child: Center(child: CircularProgressIndicator(color: DS.purple)),
                             );
-                          },
-                        ),
-                    ],
-                  ),
+                          }
+                          if (!snap.hasData || snap.data!.docs.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 40),
+                              child: DSEmpty(
+                                icon: Icons.gavel_rounded,
+                                title: 'لا توجد مزادات',
+                                subtitle: kycOk ? 'اضغط + لإضافة مزاد' : 'أكمل KYC أولاً',
+                              ),
+                            );
+                          }
+                          return StaggeredListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: snap.data!.docs.length,
+                            padding: EdgeInsets.zero,
+                            itemBuilder: (_, i) {
+                              final doc = snap.data!.docs[i];
+                              final data = doc.data() as Map<String, dynamic>;
+                              final auction = AuctionModel.fromMap(data, doc.id);
+
+                              if (_searchQuery.isNotEmpty &&
+                                  !auction.title.toLowerCase().contains(_searchQuery.toLowerCase())) {
+                                return const SizedBox.shrink();
+                              }
+
+                              return _buildAuctionCard(auction);
+                            },
+                          );
+                        },
+                      ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
       floatingActionButton: kycOk
-        ? Container(
-            decoration: BoxDecoration(
-              gradient: DS.purpleGradient,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: DS.purpleShadow,
-            ),
-            child: FloatingActionButton.extended(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.submitAuction),
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text('مزاد جديد +',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-            ),
-          )
-        : null,
+          ? Container(
+        decoration: BoxDecoration(
+          gradient: DS.purpleGradient,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: DS.purpleShadow,
+        ),
+        child: FloatingActionButton.extended(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.submitAuction),
+          icon: const Icon(Icons.add_rounded, color: Colors.white),
+          label: const Text('مزاد جديد +',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        ),
+      )
+          : null,
     );
   }
 

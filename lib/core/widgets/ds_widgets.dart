@@ -221,6 +221,10 @@ class _DarkTextFieldState extends State<DarkTextField> {
   }
 }
 
+extension on int {
+  get ms => null;
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // DARK CARD — standard surface container
 // ══════════════════════════════════════════════════════════════════════════════
