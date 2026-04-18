@@ -12,7 +12,7 @@ import 'package:auction_app2/features/organizer/screens/kyc_upload_screen.dart';
 import 'package:auction_app2/features/bidder/screens/browse_auctions_screen.dart';
 import 'package:auction_app2/features/bidder/screens/my_bids_screen.dart';
 import 'package:auction_app2/shared/models/auction_model.dart';
-
+import 'package:auction_app2/shared/wallet_screen.dart';
 class AppRoutes {
   static const String login              = '/login';
   static const String register           = '/register';
@@ -27,6 +27,7 @@ class AppRoutes {
   static const String bidderDashboard    = '/bidder/dashboard';
   static const String browseAuctions     = '/bidder/browse';
   static const String myBids             = '/bidder/my-bids'; // FIX: was using class name as case
+  static const String wallet             = '/bidder/wallet';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -45,6 +46,10 @@ class AppRoutes {
       case bidderDashboard:    return _route(const BrowseAuctionsScreen());
       case browseAuctions:     return _route(const BrowseAuctionsScreen());
       case myBids:             return _route(const MyBidsScreen());
+      case AppRoutes.wallet:
+        return MaterialPageRoute(
+          builder: (_) => WalletScreen(),
+        );
       default:                 return _route(const LoginScreen());
     }
   }

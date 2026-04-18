@@ -11,17 +11,23 @@ class UserModel {
   final bool isActive;
   final DateTime? createdAt;
 
-  // KYC (للمنظمين فقط)
+  // KYC
   final KycStatus? kycStatus;
   final bool isVerified;
   final String? kycRejectionReason;
-  final Map<String, String>? kycDocuments; // {'national_id': 'url', 'commercial_register': 'url', ...}
+  final Map<String, String>? kycDocuments;
 
   // معلومات إضافية
   final String? phone;
   final String? address;
-  final String? accountType; // 'individual' | 'company'
+  final String? accountType;
 
+  // ── الجديد: الرصيد ──
+  final double balance;         // الرصيد الحقيقي
+  final double blockedBalance;  // المجمد (ضمانات)
+  // ── الجديد: الضمان ──
+  final double? depositAmount;      // مبلغ الضمان (10% من startingPrice)
+  final List<String>? depositPaidBy; // IDs المزايدين اللي دفعو الضمان
   const UserModel({
     required this.id,
     required this.name,
@@ -36,6 +42,10 @@ class UserModel {
     this.phone,
     this.address,
     this.accountType,
+    this.balance = 0.0,
+    this.blockedBalance = 0.0,
+    this.depositAmount,
+    this.depositPaidBy,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map, String id) {
@@ -59,6 +69,14 @@ class UserModel {
       phone: map['phone'],
       address: map['address'],
       accountType: map['accountType'],
+      balance: (map['balance'] ?? 0.0).toDouble(),
+      blockedBalance: (map['blockedBalance'] ?? 0.0).toDouble(),
+      depositAmount: map['depositAmount'] != null
+          ? (map['depositAmount']).toDouble()
+          : null,
+      depositPaidBy: map['depositPaidBy'] != null
+          ? List<String>.from(map['depositPaidBy'])
+          : null,
     );
   }
 
@@ -81,6 +99,10 @@ class UserModel {
       if (phone != null) 'phone': phone,
       if (address != null) 'address': address,
       if (accountType != null) 'accountType': accountType,
+      'balance': balance,
+      'blockedBalance': blockedBalance,
+      if (depositAmount != null) 'depositAmount': depositAmount,
+      if (depositPaidBy != null) 'depositPaidBy': depositPaidBy,
     };
   }
 
@@ -97,6 +119,8 @@ class UserModel {
     String? phone,
     String? address,
     String? accountType,
+    double? balance,
+    double? blockedBalance,
   }) {
     return UserModel(
       id: id,
@@ -112,10 +136,14 @@ class UserModel {
       phone: phone ?? this.phone,
       address: address ?? this.address,
       accountType: accountType ?? this.accountType,
+      balance: balance ?? this.balance,
+      blockedBalance: blockedBalance ?? this.blockedBalance,
     );
   }
 
-  // Helpers
+  // الرصيد المتاح الحقيقي
+  double get availableBalance => balance - blockedBalance;
+
   bool get isAdmin => role == UserRole.admin;
   bool get isOrganizer => role == UserRole.organizer;
   bool get isBidder => role == UserRole.bidder;

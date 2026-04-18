@@ -7,7 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../constants/ds_colors.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
-// LOGO WIDGET — Gavel + AMS-DZ branding
+// LOGO WIDGET
 // ══════════════════════════════════════════════════════════════════════════════
 class AmsLogo extends StatelessWidget {
   final double size;
@@ -49,7 +49,7 @@ class AmsLogo extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DARK APP BAR — with logo and optional actions
+// DARK APP BAR
 // ══════════════════════════════════════════════════════════════════════════════
 class DarkAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -86,7 +86,7 @@ class DarkAppBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// GRADIENT BUTTON — Purple (primary) and Gold (accent)
+// GRADIENT BUTTON
 // ══════════════════════════════════════════════════════════════════════════════
 class GradientButton extends StatefulWidget {
   final String label;
@@ -125,24 +125,24 @@ class _GradientButtonState extends State<GradientButton> {
         ),
         child: widget.isLoading
             ? const Center(child: SizedBox(width: 22, height: 22,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)))
+            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)))
             : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                if (widget.icon != null) ...[
-                  Icon(widget.icon, size: 18, color: Colors.white),
-                  const SizedBox(width: 8),
-                ],
-                Text(widget.label, style: const TextStyle(
-                  color: Colors.white, fontSize: 15,
-                  fontWeight: FontWeight.w700, letterSpacing: 0.3,
-                )),
-              ]),
+          if (widget.icon != null) ...[
+            Icon(widget.icon, size: 18, color: Colors.white),
+            const SizedBox(width: 8),
+          ],
+          Text(widget.label, style: const TextStyle(
+            color: Colors.white, fontSize: 15,
+            fontWeight: FontWeight.w700, letterSpacing: 0.3,
+          )),
+        ]),
       ),
     );
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DARK TEXT FIELD — animated glow on focus
+// DARK TEXT FIELD
 // ══════════════════════════════════════════════════════════════════════════════
 class DarkTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -206,9 +206,9 @@ class _DarkTextFieldState extends State<DarkTextField> {
               color: _focused ? DS.purple : DS.textMuted),
           suffixIcon: widget.obscure
               ? IconButton(
-                  icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                      size: 18, color: DS.textMuted),
-                  onPressed: () => setState(() => _obscure = !_obscure))
+              icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  size: 18, color: DS.textMuted),
+              onPressed: () => setState(() => _obscure = !_obscure))
               : widget.suffix,
         ),
       ),
@@ -216,17 +216,13 @@ class _DarkTextFieldState extends State<DarkTextField> {
       begin: const Offset(1, 1),
       end: const Offset(1.02, 1.02),
       curve: Curves.easeOutBack,
-      duration: 200.ms,
+      duration: const Duration(milliseconds: 200),
     );
   }
 }
 
-extension on int {
-  get ms => null;
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
-// DARK CARD — standard surface container
+// DARK CARD
 // ══════════════════════════════════════════════════════════════════════════════
 class DarkCard extends StatefulWidget {
   final Widget child;
@@ -377,12 +373,8 @@ class DSEmpty extends StatelessWidget {
   final VoidCallback? onRefresh;
 
   const DSEmpty({
-    super.key,
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    this.action,
-    this.onRefresh,
+    super.key, required this.icon, required this.title,
+    this.subtitle, this.action, this.onRefresh,
   });
 
   @override
@@ -396,8 +388,7 @@ class DSEmpty extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 100,
-                height: 100,
+                width: 100, height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: DS.purple.withValues(alpha: 0.05),
@@ -406,18 +397,10 @@ class DSEmpty extends StatelessWidget {
                 child: Icon(icon, size: 44, color: DS.purple.withValues(alpha: 0.4)),
               ),
               const SizedBox(height: 32),
-              Text(
-                title,
-                style: DS.titleM.copyWith(fontSize: 20),
-                textAlign: TextAlign.center,
-              ),
+              Text(title, style: DS.titleM.copyWith(fontSize: 20), textAlign: TextAlign.center),
               if (subtitle != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  subtitle!,
-                  style: DS.body.copyWith(color: DS.textSecondary),
-                  textAlign: TextAlign.center,
-                ),
+                Text(subtitle!, style: DS.body.copyWith(color: DS.textSecondary), textAlign: TextAlign.center),
               ],
               const SizedBox(height: 32),
               if (action != null)
@@ -435,17 +418,17 @@ class DSEmpty extends StatelessWidget {
                 )
               else
                 OutlinedButton.icon(
-                  onPressed: () {}, // Default action or browse
+                  onPressed: () {},
                   icon: const Icon(Icons.explore_outlined, size: 18),
                   label: const Text('استكشاف المزادات'),
                 ),
             ],
           ).animate().scale(
-                begin: const Offset(0.9, 0.9),
-                end: const Offset(1, 1),
-                duration: 600.ms,
-                curve: Curves.easeOutBack,
-              ),
+            begin: const Offset(0.9, 0.9),
+            end: const Offset(1, 1),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOutBack,
+          ),
         ),
       ),
     );
@@ -486,7 +469,7 @@ class DSAvatar extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// STAT CARD — dashboard KPI card
+// STAT CARD
 // ══════════════════════════════════════════════════════════════════════════════
 class DSStatCard extends StatelessWidget {
   final IconData icon;
@@ -507,29 +490,28 @@ class DSStatCard extends StatelessWidget {
       border: Border.all(color: color.withValues(alpha: 0.2)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Container(
-          width: 38, height: 38,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        const SizedBox(height: 12),
-        loading
-            ? Container(height: 22, width: 48,
+            Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(height: 12),
+            loading
+                ? Container(height: 22, width: 48,
                 decoration: BoxDecoration(color: DS.bgElevated, borderRadius: BorderRadius.circular(6)))
-            : Text(value, style: TextStyle(
-                fontSize: 24, fontWeight: FontWeight.w800, color: color)),
-        const SizedBox(height: 2),
-        Text(label, style: DS.label),
-      ]),
+                : Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: color)),
+            const SizedBox(height: 2),
+            Text(label, style: DS.label),
+          ]),
     );
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// INFO BANNER — colored notification strip
+// INFO BANNER
 // ══════════════════════════════════════════════════════════════════════════════
 class DSBanner extends StatelessWidget {
   final String message;
@@ -565,7 +547,7 @@ class DSBanner extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BACKGROUND ORB — purple gradient circle for auth screens
+// BACKGROUND ORB
 // ══════════════════════════════════════════════════════════════════════════════
 class PurpleOrb extends StatelessWidget {
   final double size;
@@ -596,7 +578,7 @@ class PurpleOrb extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PRICE TAG — for auction prices
+// PRICE TAG
 // ══════════════════════════════════════════════════════════════════════════════
 class DSPriceTag extends StatelessWidget {
   final String label;
@@ -626,7 +608,7 @@ class DSPriceTag extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// COUNTDOWN DISPLAY — h:m:s with urgency color
+// COUNTDOWN DISPLAY
 // ══════════════════════════════════════════════════════════════════════════════
 class DSCountdown extends StatelessWidget {
   final String time;
@@ -659,7 +641,7 @@ class DSCountdown extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DIVIDER with label
+// DIVIDER WITH LABEL
 // ══════════════════════════════════════════════════════════════════════════════
 class DSDivider extends StatelessWidget {
   final String? label;
@@ -680,7 +662,7 @@ class DSDivider extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// GLASS CARD — Frosted-glass container using BackdropFilter
+// GLASS CARD
 // ══════════════════════════════════════════════════════════════════════════════
 class GlassCard extends StatelessWidget {
   final Widget child;
@@ -693,15 +675,9 @@ class GlassCard extends StatelessWidget {
   final EdgeInsets? margin;
 
   const GlassCard({
-    super.key,
-    required this.child,
-    this.padding,
-    this.margin,
-    this.borderRadius = 24,
-    this.sigmaX = 18,
-    this.sigmaY = 18,
-    this.backgroundColor,
-    this.border,
+    super.key, required this.child, this.padding, this.margin,
+    this.borderRadius = 24, this.sigmaX = 18, this.sigmaY = 18,
+    this.backgroundColor, this.border,
   });
 
   @override
@@ -717,11 +693,7 @@ class GlassCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: backgroundColor ?? DS.bgCard.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(borderRadius),
-              border: border ??
-                  Border.all(
-                    color: DS.border.withValues(alpha: 0.5),
-                    width: 1,
-                  ),
+              border: border ?? Border.all(color: DS.border.withValues(alpha: 0.5), width: 1),
             ),
             child: child,
           ),
@@ -732,7 +704,7 @@ class GlassCard extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FADE-SLIDE-IN — Staggered entrance animation wrapper
+// FADE-SLIDE-IN ✅ مصلح
 // ══════════════════════════════════════════════════════════════════════════════
 class FadeSlideIn extends StatelessWidget {
   final Widget child;
@@ -745,7 +717,7 @@ class FadeSlideIn extends StatelessWidget {
     required this.child,
     this.delay = Duration.zero,
     this.duration = const Duration(milliseconds: 500),
-    this.beginOffset = const Offset(0, 32),
+    this.beginOffset = const Offset(0, 0.08),
   });
 
   @override
@@ -754,16 +726,16 @@ class FadeSlideIn extends StatelessWidget {
         .animate(delay: delay)
         .fadeIn(duration: duration, curve: Curves.easeOutCubic)
         .slide(
-          begin: beginOffset.scale(1/32, 1/32), // Convert to relative offset if needed
-          end: Offset.zero,
-          duration: duration,
-          curve: Curves.easeOutCubic,
-        );
+      begin: beginOffset,
+      end: Offset.zero,
+      duration: duration,
+      curve: Curves.easeOutCubic,
+    );
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// TAP ANIMATED — Unified scale interaction
+// TAP ANIMATED
 // ══════════════════════════════════════════════════════════════════════════════
 class TapAnimated extends StatefulWidget {
   final Widget child;
@@ -771,10 +743,7 @@ class TapAnimated extends StatefulWidget {
   final double scale;
 
   const TapAnimated({
-    super.key,
-    required this.child,
-    this.onTap,
-    this.scale = 0.97,
+    super.key, required this.child, this.onTap, this.scale = 0.97,
   });
 
   @override
@@ -795,13 +764,17 @@ class _TapAnimatedState extends State<TapAnimated> {
       onTapCancel: () => setState(() => _isPressed = false),
       child: widget.child
           .animate(target: _isPressed ? 1 : 0)
-          .scaleXY(end: widget.scale, duration: 100.ms, curve: Curves.easeOutCubic),
+          .scaleXY(
+        end: widget.scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+      ),
     );
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// STAGGERED LIST BUILDER — auto-applies FadeSlideIn to list items
+// STAGGERED LIST VIEW
 // ══════════════════════════════════════════════════════════════════════════════
 class StaggeredListView extends StatelessWidget {
   final int itemCount;
@@ -814,15 +787,9 @@ class StaggeredListView extends StatelessWidget {
   final ScrollController? controller;
 
   const StaggeredListView({
-    super.key,
-    required this.itemCount,
-    required this.itemBuilder,
-    this.padding,
-    this.baseDelayMs = 100,
-    this.staggerMs = 60,
-    this.physics,
-    this.shrinkWrap = false,
-    this.controller,
+    super.key, required this.itemCount, required this.itemBuilder,
+    this.padding, this.baseDelayMs = 100, this.staggerMs = 60,
+    this.physics, this.shrinkWrap = false, this.controller,
   });
 
   @override

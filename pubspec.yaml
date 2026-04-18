@@ -5,11 +5,14 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.7
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # UI
+  cupertino_icons: ^1.0.8
 
   # Firebase
   firebase_core: ^2.27.0
@@ -17,21 +20,19 @@ dependencies:
   cloud_firestore: ^4.15.0
   firebase_storage: ^11.6.0
 
-  # Image Picker
+  # Features
   image_picker: ^1.0.7
-
-  # UI & Utils
-  cupertino_icons: ^1.0.8
+  url_launcher: ^6.2.5
   intl: ^0.20.2
-  flutter_countdown_timer: ^4.1.0
+
+  # Animation & Timer
   flutter_animate: ^4.5.0
-  url_launcher: ^6.2.5   # ← حطها هنا ✅
+  flutter_countdown_timer: ^4.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true

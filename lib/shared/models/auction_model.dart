@@ -60,6 +60,9 @@ class AuctionModel {
   final String? adminNote; // ملاحظة الأدمين على السعر
 
   final DateTime createdAt;
+  // ── الضمان ──
+  final double? depositAmount;         // 10% من startingPrice
+  final List<String>? depositPaidBy;   // IDs المزايدين اللي دفعوا
 
   AuctionModel({
     required this.id,
@@ -84,11 +87,15 @@ class AuctionModel {
     this.rejectionReason,
     this.adminNote,
     required this.createdAt,
+    this.depositAmount,
+    this.depositPaidBy,
   });
 
   // السعر الفعلي = السعر المعدّل من الأدمين أو السعر الأصلي
   double get effectiveStartingPrice => adminAdjustedPrice ?? startingPrice;
-
+   //gettes
+  double get deposit => (adminAdjustedPrice ?? startingPrice) * 0.1;
+  bool hasUserPaidDeposit(String uid) => depositPaidBy?.contains(uid) ?? false;
   factory AuctionModel.fromMap(Map<String, dynamic> map, String id) {
     return AuctionModel(
       id: id,
@@ -129,6 +136,12 @@ class AuctionModel {
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
+      depositAmount: map['depositAmount'] != null
+          ? (map['depositAmount']).toDouble()
+          : null,
+      depositPaidBy: map['depositPaidBy'] != null
+          ? List<String>.from(map['depositPaidBy'])
+          : null,
     );
   }
 
@@ -159,6 +172,8 @@ class AuctionModel {
     if (rejectionReason != null) 'rejectionReason': rejectionReason,
     if (adminNote != null) 'adminNote': adminNote,
     'createdAt': Timestamp.fromDate(createdAt),
+    if (depositAmount != null) 'depositAmount': depositAmount,
+    if (depositPaidBy != null) 'depositPaidBy': depositPaidBy,
   };
 
   AuctionModel copyWith({

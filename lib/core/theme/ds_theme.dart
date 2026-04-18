@@ -9,7 +9,6 @@ class DSTheme {
       brightness: Brightness.light,
       scaffoldBackgroundColor: DS.bg,
 
-      // ── Smooth page transitions ──
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
@@ -30,7 +29,6 @@ class DSTheme {
         onSurface: DS.textPrimary,
       ),
 
-      // ── AppBar ──
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: DS.textPrimary,
@@ -48,7 +46,6 @@ class DSTheme {
         iconTheme: IconThemeData(color: DS.textPrimary, size: 22),
       ),
 
-      // ── Card ──
       cardTheme: CardThemeData(
         color: DS.bgCard,
         elevation: 0,
@@ -60,7 +57,6 @@ class DSTheme {
         margin: EdgeInsets.zero,
       ),
 
-      // ── Buttons ──
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: DS.purple,
@@ -89,7 +85,6 @@ class DSTheme {
         ),
       ),
 
-      // ── Input ──
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: DS.bgField,
@@ -110,7 +105,6 @@ class DSTheme {
         labelStyle: const TextStyle(color: DS.textMuted, fontSize: 14),
       ),
 
-      // ── Navigation ──
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: DS.bgCard,
         elevation: 0,
@@ -138,7 +132,6 @@ class DSTheme {
         dividerColor: DS.divider,
       ),
 
-      // ── Sheets & Dialogs ──
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: DS.bgModal,
         elevation: 0,
@@ -163,7 +156,9 @@ class DSTheme {
           borderRadius: BorderRadius.circular(14),
           side: const BorderSide(color: DS.border),
         ),
-        contentTextStyle: const TextStyle(color: DS.textPrimary, fontSize: 13, fontWeight: FontWeight.w500),
+        contentTextStyle: const TextStyle(
+          color: DS.textPrimary, fontSize: 13, fontWeight: FontWeight.w500,
+        ),
       ),
 
       dividerTheme: const DividerThemeData(color: DS.divider, thickness: 1, space: 1),
@@ -176,8 +171,8 @@ class DSTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF0A0A0F),
       colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF8B5CF6),
-        secondary: Color(0xFFC8972B),
+        primary: Color(0xFF14B8A6),
+        secondary: Color(0xFFF59E0B),
         surface: Color(0xFF12121A),
       ),
       appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0),

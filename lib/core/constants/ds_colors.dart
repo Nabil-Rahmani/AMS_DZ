@@ -1,61 +1,59 @@
 import 'package:flutter/material.dart';
 
-/// AMS-DZ Design System — Dark Auction Theme
-/// Primary: Deep Black + Purple Gradient + Gold Accent
 class DS {
   // ── Backgrounds ───────────────────────────────────────────────
-  static const Color bg          = Color(0xFFFFFFFF); // pure white
-  static const Color bgCard      = Color(0xFFF8F9FB); // very light gray surface
-  static const Color bgElevated  = Color(0xFFFFFFFF); // elevated surface
-  static const Color bgField     = Color(0xFFF3F4F6); // input field light gray
-  static const Color bgModal     = Color(0xFFFFFFFF); // bottom sheet
+  static const Color bg         = Color(0xFFF0FAFA); // teal-tinted white
+  static const Color bgCard     = Color(0xFFFFFFFF);
+  static const Color bgElevated = Color(0xFFFFFFFF);
+  static const Color bgField    = Color(0xFFEEF9F9);
+  static const Color bgModal    = Color(0xFFFFFFFF);
 
-  // ── Purple family ─────────────────────────────────────────────
-  static const Color purple      = Color(0xFF7C3AED); // slightly deeper purple for light mode contrast
-  static const Color purpleDark  = Color(0xFF5B21B6); 
-  static const Color purpleDeep  = Color(0xFFF5F3FF); // very light purple tint for bgs
-  static const Color purpleGlow  = Color(0x157C3AED); // subtle glow for light mode
+  // ── Teal family (replaces purple) ─────────────────────────────
+  static const Color purple      = Color(0xFF0D9488); // teal-600
+  static const Color purpleDark  = Color(0xFF0F766E); // teal-700
+  static const Color purpleDeep  = Color(0xFFECFDF5); // teal tint bg
+  static const Color purpleGlow  = Color(0x150D9488);
 
-  // ── Gold accent (auction brand) ───────────────────────────────
-  static const Color gold        = Color(0xFFB45309); // adjusted for readability on light bg
-  static const Color goldLight   = Color(0xFFD97706);
+  // ── Gold accent ───────────────────────────────────────────────
+  static const Color gold        = Color(0xFFD97706);
+  static const Color goldLight   = Color(0xFFF59E0B);
   static const Color goldDark    = Color(0xFF92400E);
-  static const Color goldSurface = Color(0xFFFFFBEB); // light gold tint
-  static const Color goldGlow    = Color(0x10B45309);
+  static const Color goldSurface = Color(0xFFFFFBEB);
+  static const Color goldGlow    = Color(0x10D97706);
 
   // ── Text ──────────────────────────────────────────────────────
-  static const Color textPrimary   = Color(0xFF111827); // almost black
-  static const Color textSecondary = Color(0xFF4B5563); // gray-600
-  static const Color textMuted     = Color(0xFF9CA3AF); // gray-400
-  static const Color textHint      = Color(0xFFD1D5DB); // gray-300
+  static const Color textPrimary   = Color(0xFF111827);
+  static const Color textSecondary = Color(0xFF4B5563);
+  static const Color textMuted     = Color(0xFF9CA3AF);
+  static const Color textHint      = Color(0xFFD1D5DB);
 
   // ── Status ────────────────────────────────────────────────────
-  static const Color success       = Color(0xFF10B981);
-  static const Color successSurface= Color(0xFFECFDF5);
-  static const Color error         = Color(0xFFEF4444);
-  static const Color errorSurface  = Color(0xFFFEF2F2);
-  static const Color warning       = Color(0xFFF59E0B);
-  static const Color warningSurface= Color(0xFFFFFBEB);
-  static const Color info          = Color(0xFF3B82F6);
-  static const Color infoSurface   = Color(0xFFEFF6FF);
+  static const Color success        = Color(0xFF10B981);
+  static const Color successSurface = Color(0xFFECFDF5);
+  static const Color error          = Color(0xFFEF4444);
+  static const Color errorSurface   = Color(0xFFFEF2F2);
+  static const Color warning        = Color(0xFFF59E0B);
+  static const Color warningSurface = Color(0xFFFFFBEB);
+  static const Color info           = Color(0xFF0D9488);
+  static const Color infoSurface    = Color(0xFFECFDF5);
 
   // ── Borders ───────────────────────────────────────────────────
-  static const Color border        = Color(0xFFE5E7EB); // gray-200
-  static const Color borderFocus   = Color(0xFF7C3AED);
-  static const Color borderGold    = Color(0xFFFDE68A);
-  static const Color divider       = Color(0xFFF3F4F6);
+  static const Color border      = Color(0xFFCCEEEB);
+  static const Color borderFocus = Color(0xFF0D9488);
+  static const Color borderGold  = Color(0xFFFDE68A);
+  static const Color divider     = Color(0xFFE6F7F6);
 
-  // ── Auction Status colors ─────────────────────────────────────
+  // ── Auction Status ────────────────────────────────────────────
   static const Color statusDraft     = Color(0xFF9CA3AF);
-  static const Color statusSubmitted = Color(0xFF3B82F6);
-  static const Color statusApproved  = Color(0xFF7C3AED);
+  static const Color statusSubmitted = Color(0xFF0D9488);
+  static const Color statusApproved  = Color(0xFF0F766E);
   static const Color statusActive    = Color(0xFF10B981);
   static const Color statusEnded     = Color(0xFF6B7280);
   static const Color statusRejected  = Color(0xFFEF4444);
 
   // ── Gradients ─────────────────────────────────────────────────
   static const LinearGradient purpleGradient = LinearGradient(
-    colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+    colors: [Color(0xFF14B8A6), Color(0xFF0D9488)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -67,19 +65,19 @@ class DS {
   );
 
   static const LinearGradient darkGradient = LinearGradient(
-    colors: [Color(0xFFF9FAFB), Color(0xFFFFFFFF)],
+    colors: [Color(0xFFF0FAFA), Color(0xFFFFFFFF)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const LinearGradient headerGradient = LinearGradient(
-    colors: [Color(0xFFFFFFFF), Color(0xFFF8F9FB)],
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
+    colors: [Color(0xFF0D9488), Color(0xFF0F766E)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
   );
 
   static const RadialGradient orbGradient = RadialGradient(
-    colors: [Color(0x208B5CF6), Color(0x108B5CF6), Color(0x00FFFFFF)],
+    colors: [Color(0x2014B8A6), Color(0x1014B8A6), Color(0x00FFFFFF)],
     stops: [0.0, 0.5, 1.0],
     radius: 0.8,
   );
@@ -109,7 +107,7 @@ class DS {
     ),
   ];
 
-  // ── Typography helpers ────────────────────────────────────────
+  // ── Typography ────────────────────────────────────────────────
   static TextStyle get displayLarge => const TextStyle(
     fontSize: 32, fontWeight: FontWeight.w800,
     color: textPrimary, letterSpacing: -1.0, height: 1.2,

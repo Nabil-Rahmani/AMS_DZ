@@ -20,7 +20,7 @@ class AMSDZApp extends StatelessWidget {
       title: 'AMS-DZ',
       debugShowCheckedModeBanner: false,
       theme: DSTheme.light,
-      darkTheme: DSTheme.dark,
+      darkTheme: DSTheme.light,
       themeMode: ThemeMode.light,
       onGenerateRoute: AppRoutes.generateRoute,
       home: const AuthGate(),

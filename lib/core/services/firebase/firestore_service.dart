@@ -1,13 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:auction_app2/shared/models/user_model.dart';
 import 'package:auction_app2/shared/models/auction_model.dart';
+import 'package:auction_app2/shared/models/wallet_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final _db = FirebaseFirestore.instance;
 
   // ══════════════════════════════════════════════════════════════════
   // USERS
   // ══════════════════════════════════════════════════════════════════
+  Stream<UserModel> streamUser(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((doc) => UserModel.fromMap(doc.data()!, doc.id));
+  }
 
   Stream<List<UserModel>> streamAllUsers() {
     return _firestore
@@ -56,9 +65,9 @@ class FirestoreService {
 
   String _roleLabel(UserRole role) {
     switch (role) {
-      case UserRole.admin: return 'مدير';
+      case UserRole.admin:     return 'مدير';
       case UserRole.organizer: return 'منظم';
-      case UserRole.bidder: return 'مزايد';
+      case UserRole.bidder:    return 'مزايد';
     }
   }
 
@@ -135,7 +144,6 @@ class FirestoreService {
     return ref.id;
   }
 
-  /// الأدمين يوافق على المزاد فقط (بدون تحديد وقت بعد)
   Future<void> approveAuction(String auctionId) async {
     await _firestore.collection('auctions').doc(auctionId).update({
       'status': AuctionStatus.approved.name,
@@ -143,7 +151,6 @@ class FirestoreService {
     });
   }
 
-  /// الأدمين يحدد جدول المزاد: يوم المعاينة + بداية + نهاية + يفعّله
   Future<void> setAuctionSchedule({
     required String auctionId,
     required String organizerId,
@@ -153,12 +160,11 @@ class FirestoreService {
   }) async {
     await _firestore.collection('auctions').doc(auctionId).update({
       'inspectionDay': Timestamp.fromDate(inspectionDay),
-      'startTime': Timestamp.fromDate(startTime),
-      'endTime': Timestamp.fromDate(endTime),
-      'status': AuctionStatus.approved.name,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'startTime':     Timestamp.fromDate(startTime),
+      'endTime':       Timestamp.fromDate(endTime),
+      'status':        AuctionStatus.approved.name,
+      'updatedAt':     FieldValue.serverTimestamp(),
     });
-    // إشعار للبائع
     await _addNotification(
       userId: organizerId,
       auctionId: auctionId,
@@ -168,7 +174,6 @@ class FirestoreService {
     );
   }
 
-  /// الأدمين يعدّل السعر الابتدائي مع ملاحظة
   Future<void> adjustAuctionPrice({
     required String auctionId,
     required String organizerId,
@@ -177,11 +182,10 @@ class FirestoreService {
   }) async {
     await _firestore.collection('auctions').doc(auctionId).update({
       'adminAdjustedPrice': newPrice,
-      'currentPrice': newPrice,
-      'adminNote': adminNote,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'currentPrice':       newPrice,
+      'adminNote':          adminNote,
+      'updatedAt':          FieldValue.serverTimestamp(),
     });
-    // إشعار للبائع
     await _addNotification(
       userId: organizerId,
       auctionId: auctionId,
@@ -191,30 +195,27 @@ class FirestoreService {
     );
   }
 
-  /// رفض مزاد
   Future<void> rejectAuction(String auctionId, {String? reason}) async {
     await _firestore.collection('auctions').doc(auctionId).update({
-      'status': AuctionStatus.rejected.name,
+      'status':          AuctionStatus.rejected.name,
       'rejectionReason': reason ?? '',
-      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedAt':       FieldValue.serverTimestamp(),
     });
   }
 
-  /// تفعيل مزاد approved → active (بعد ما يحدد الوقت)
   Future<void> activateAuction(String auctionId) async {
     await _firestore.collection('auctions').doc(auctionId).update({
-      'status': AuctionStatus.active.name,
+      'status':    AuctionStatus.active.name,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  /// تحديد الفائز
   Future<void> declareWinner({
     required String auctionId,
     required String winnerId,
   }) async {
     await _firestore.collection('auctions').doc(auctionId).update({
-      'winnerId': winnerId,
+      'winnerId':  winnerId,
       'updatedAt': FieldValue.serverTimestamp(),
     });
     await _addNotification(
@@ -265,9 +266,9 @@ class FirestoreService {
           .get(),
     ]);
     return {
-      'totalUsers': results[0].count ?? 0,
-      'pendingKyc': results[1].count ?? 0,
-      'activeAuctions': results[2].count ?? 0,
+      'totalUsers':      results[0].count ?? 0,
+      'pendingKyc':      results[1].count ?? 0,
+      'activeAuctions':  results[2].count ?? 0,
       'pendingAuctions': results[3].count ?? 0,
     };
   }
@@ -275,27 +276,23 @@ class FirestoreService {
   Future<Map<String, dynamic>> getReportsStats() async {
     final now = DateTime.now();
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-
     final results = await Future.wait([
       _firestore.collection('users').where('createdAt', isGreaterThan: Timestamp.fromDate(thirtyDaysAgo)).count().get(),
       _firestore.collection('auctions').where('status', isEqualTo: 'ended').get(),
       _firestore.collection('auctions').count().get(),
     ]);
-
-    final newUsers = (results[0] as AggregateQuerySnapshot).count ?? 0;
+    final newUsers         = (results[0] as AggregateQuerySnapshot).count ?? 0;
     final endedAuctionsDocs = (results[1] as QuerySnapshot).docs;
-    final totalAuctions = (results[2] as AggregateQuerySnapshot).count ?? 0;
-
+    final totalAuctions    = (results[2] as AggregateQuerySnapshot).count ?? 0;
     double totalVolume = 0;
     for (var doc in endedAuctionsDocs) {
       final data = doc.data() as Map<String, dynamic>;
       totalVolume += (data['currentPrice'] ?? data['startingPrice'] ?? 0).toDouble();
     }
-
     return {
       'newUsersLast30Days': newUsers,
-      'totalVolume': totalVolume,
-      'totalAuctions': totalAuctions,
+      'totalVolume':        totalVolume,
+      'totalAuctions':      totalAuctions,
       'endedAuctionsCount': endedAuctionsDocs.length,
     };
   }
@@ -313,10 +310,225 @@ class FirestoreService {
     await _firestore.collection('notifications').add({
       'userId': userId,
       if (auctionId != null) 'auctionId': auctionId,
-      'type': type,
-      'message': message,
-      'isRead': false,
+      'type':      type,
+      'message':   message,
+      'isRead':    false,
       'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // DEPOSIT (نظام الضمان)
+  // ══════════════════════════════════════════════════════════════════
+
+  Future<void> payDeposit({
+    required String auctionId,
+    required String userId,
+    required double depositAmount,
+  }) async {
+    final userDoc = await _firestore.collection('users').doc(userId).get();
+    final user = UserModel.fromMap(userDoc.data()!, userDoc.id);
+    if (user.availableBalance < depositAmount) {
+      throw Exception('الرصيد غير كافٍ. رصيدك المتاح: ${user.availableBalance.toStringAsFixed(0)} DZD');
+    }
+    final batch = _firestore.batch();
+    batch.update(_firestore.collection('users').doc(userId), {
+      'balance':        FieldValue.increment(-depositAmount),
+      'blockedBalance': FieldValue.increment(depositAmount),
+      'updatedAt':      FieldValue.serverTimestamp(),
+    });
+    batch.update(_firestore.collection('auctions').doc(auctionId), {
+      'depositPaidBy': FieldValue.arrayUnion([userId]),
+      'updatedAt':     FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+    await _addNotification(
+      userId: userId,
+      auctionId: auctionId,
+      type: 'deposit_paid',
+      message: 'تم دفع ضمان ${depositAmount.toStringAsFixed(0)} DZD. أنت الآن مشارك رسمي في المزاد.',
+    );
+  }
+
+  Future<void> refundDeposits({
+    required String auctionId,
+    required String winnerId,
+    required double depositAmount,
+  }) async {
+    final auctionDoc = await _firestore.collection('auctions').doc(auctionId).get();
+    final data = auctionDoc.data()!;
+    final List<String> depositPaidBy = List<String>.from(data['depositPaidBy'] ?? []);
+    final batch = _firestore.batch();
+    for (final uid in depositPaidBy) {
+      if (uid == winnerId) continue;
+      batch.update(_firestore.collection('users').doc(uid), {
+        'balance':        FieldValue.increment(depositAmount),
+        'blockedBalance': FieldValue.increment(-depositAmount),
+        'updatedAt':      FieldValue.serverTimestamp(),
+      });
+      await _addNotification(
+        userId: uid,
+        auctionId: auctionId,
+        type: 'deposit_refunded',
+        message: 'تم إرجاع ضمانك ${depositAmount.toStringAsFixed(0)} DZD بعد انتهاء المزاد.',
+      );
+    }
+    await batch.commit();
+  }
+
+  Future<void> refundSingleDeposit({
+    required String auctionId,
+    required String userId,
+    required double depositAmount,
+  }) async {
+    final batch = _firestore.batch();
+    batch.update(_firestore.collection('users').doc(userId), {
+      'balance':        FieldValue.increment(depositAmount),
+      'blockedBalance': FieldValue.increment(-depositAmount),
+      'updatedAt':      FieldValue.serverTimestamp(),
+    });
+    batch.update(_firestore.collection('auctions').doc(auctionId), {
+      'depositPaidBy': FieldValue.arrayRemove([userId]),
+      'updatedAt':     FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // WALLET
+  // ══════════════════════════════════════════════════════════════════
+
+  Future<void> rechargeWithCode(String userId, String code) async {
+    final codeDoc = await _db.collection('recharge_codes').doc(code).get();
+    if (!codeDoc.exists) throw Exception('الكود غير صالح');
+    final data = codeDoc.data()!;
+    if (data['used'] == true) throw Exception('الكود مستخدم مسبقاً');
+    final amount = (data['amount'] as num).toDouble();
+    final batch = _db.batch();
+    batch.update(_db.collection('recharge_codes').doc(code), {
+      'used':   true,
+      'usedBy': userId,
+      'usedAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(_db.collection('users').doc(userId), {
+      'balance': FieldValue.increment(amount),
+    });
+    batch.set(_db.collection('wallet_transactions').doc(), {
+      'userId':       userId,
+      'amount':       amount,
+      'method':       'rechargeCode',
+      'status':       'approved',
+      'rechargeCode': code,
+      'createdAt':    FieldValue.serverTimestamp(),
+      'approvedAt':   FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  Future<void> requestDeposit({
+    required String userId,
+    required double amount,
+    required DepositMethod method,
+    String? proofUrl,
+  }) async {
+    await _db.collection('wallet_transactions').add({
+      'userId':    userId,
+      'amount':    amount,
+      'method':    method.name,
+      'status':    'pending',
+      'proofUrl':  proofUrl,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> approveDeposit(String txId, String userId, double amount) async {
+    final batch = _db.batch();
+    batch.update(_db.collection('wallet_transactions').doc(txId), {
+      'status':     'approved',
+      'approvedAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(_db.collection('users').doc(userId), {
+      'balance': FieldValue.increment(amount),
+    });
+    await batch.commit();
+  }
+
+  Future<void> rejectDeposit(String txId) async {
+    await _db.collection('wallet_transactions').doc(txId).update({
+      'status': 'rejected',
+    });
+  }
+
+  Future<void> blockDeposit(String userId, double depositAmount) async {
+    final userRef = _db.collection('users').doc(userId);
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(userRef);
+      final balance = (snap['balance'] as num).toDouble();
+      if (balance < depositAmount) throw Exception('الرصيد غير كافٍ');
+      tx.update(userRef, {
+        'balance':        FieldValue.increment(-depositAmount),
+        'blockedBalance': FieldValue.increment(depositAmount),
+      });
+    });
+  }
+
+  Future<void> releaseDeposit(String userId, double depositAmount) async {
+    await _db.collection('users').doc(userId).update({
+      'blockedBalance': FieldValue.increment(-depositAmount),
+      'balance':        FieldValue.increment(depositAmount),
+    });
+  }
+
+  Future<void> consumeDeposit(String userId, double depositAmount) async {
+    await _db.collection('users').doc(userId).update({
+      'blockedBalance': FieldValue.increment(-depositAmount),
+    });
+  }
+
+  // ✅ بدون orderBy لتجنب مشكلة الـ index
+  Stream<List<WalletTransaction>> streamUserTransactions(String userId) =>
+      _db.collection('wallet_transactions')
+          .where('userId', isEqualTo: userId)
+          .snapshots()
+          .map((s) {
+        final docs = s.docs
+            .map((d) => WalletTransaction.fromMap(d.id, d.data()))
+            .toList();
+        // ترتيب يدوي بدل orderBy
+        docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return docs;
+      });
+
+  // ✅ بدون orderBy لتجنب مشكلة الـ index
+  Stream<List<WalletTransaction>> streamPendingDeposits() =>
+      _db.collection('wallet_transactions')
+          .where('status', isEqualTo: 'pending')
+          .snapshots()
+          .map((s) {
+        final docs = s.docs
+            .map((d) => WalletTransaction.fromMap(d.id, d.data()))
+            .toList();
+        // ترتيب يدوي بدل orderBy
+        docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return docs;
+      });
+  Future<void> requestDepositWithCard({
+    required String userId,
+    required double amount,
+    required String cardName,
+    required String cardNumber,
+    required String cardExpiry,
+  }) async {
+    await _db.collection('wallet_transactions').add({
+      'userId':     userId,
+      'amount':     amount,
+      'method':     'card',
+      'status':     'pending',
+      // ✅ نحفظ آخر 4 أرقام فقط للأمان
+      'cardName':   cardName,
+      'cardLast4':  cardNumber.substring(cardNumber.length - 4),
+      'cardExpiry': cardExpiry,
+      'createdAt':  FieldValue.serverTimestamp(),
     });
   }
 }
