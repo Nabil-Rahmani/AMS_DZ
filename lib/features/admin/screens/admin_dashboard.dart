@@ -2,14 +2,17 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:auction_app2/core/services/firebase/firestore_service.dart';
+import 'package:auction_app2/core/services/notification_service.dart';
+import 'package:auction_app2/core/services/firebase_messaging_service.dart';
 import '../../../core/constants/ds_colors.dart';
 import '../../../core/widgets/ds_widgets.dart';
 import '../widgets/admin_dashboard_home.dart';
+import '../../notifications/notifications_screen.dart';
 import 'manage_users_screen.dart';
 import 'manage_auctions_screen.dart';
 import 'verify_kyc_screen.dart';
 import 'reports_screen.dart';
-import 'admin_wallet_requests_screen.dart'; // ✅
+import 'admin_wallet_requests_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -23,13 +26,15 @@ class _AdminDashboardState extends State<AdminDashboard>
   int _selectedIndex = 0;
   late AnimationController _animCtrl;
 
+  // ✅ أضفنا الإشعارات كـ index 1 — وزحزحنا الباقي
   final List<({IconData icon, String label, Color color})> _nav = [
-    (icon: Icons.dashboard_rounded,          label: 'الرئيسية',    color: DS.purple),
-    (icon: Icons.people_rounded,             label: 'المستخدمون',  color: DS.info),
-    (icon: Icons.gavel_rounded,              label: 'المزادات',    color: DS.gold),
-    (icon: Icons.verified_user_rounded,      label: 'KYC',         color: DS.success),
-    (icon: Icons.account_balance_rounded,    label: 'الشحن',       color: const Color(0xFF7C3AED)), // ✅
-    (icon: Icons.bar_chart_rounded,          label: 'التقارير',    color: DS.info),
+    (icon: Icons.dashboard_rounded,       label: 'الرئيسية',   color: DS.purple),
+    (icon: Icons.notifications_rounded,   label: 'الإشعارات',  color: DS.warning),
+    (icon: Icons.people_rounded,          label: 'المستخدمون', color: DS.info),
+    (icon: Icons.gavel_rounded,           label: 'المزادات',   color: DS.gold),
+    (icon: Icons.verified_user_rounded,   label: 'KYC',        color: DS.success),
+    (icon: Icons.account_balance_rounded, label: 'الشحن',      color: const Color(0xFF7C3AED)),
+    (icon: Icons.bar_chart_rounded,       label: 'التقارير',   color: DS.info),
   ];
 
   @override
@@ -45,11 +50,12 @@ class _AdminDashboardState extends State<AdminDashboard>
   Widget _buildPage() {
     switch (_selectedIndex) {
       case 0: return AdminDashboardHome(db: _db, onActionTap: (i) => setState(() => _selectedIndex = i));
-      case 1: return const ManageUsersScreen();
-      case 2: return const ManageAuctionsScreen();
-      case 3: return const VerifyKycScreen();
-      case 4: return const AdminWalletRequestsScreen(); // ✅
-      case 5: return const ReportsScreen();
+      case 1: return const NotificationsScreen(); // ✅
+      case 2: return const ManageUsersScreen();
+      case 3: return const ManageAuctionsScreen();
+      case 4: return const VerifyKycScreen();
+      case 5: return const AdminWalletRequestsScreen();
+      case 6: return const ReportsScreen();
       default: return AdminDashboardHome(db: _db, onActionTap: (i) => setState(() => _selectedIndex = i));
     }
   }
@@ -73,7 +79,11 @@ class _AdminDashboardState extends State<AdminDashboard>
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Container(
                   width: 60, height: 60,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: DS.errorSurface, border: Border.all(color: DS.error.withValues(alpha: 0.3))),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: DS.errorSurface,
+                    border: Border.all(color: DS.error.withValues(alpha: 0.3)),
+                  ),
                   child: const Icon(Icons.logout_rounded, color: DS.error, size: 28),
                 ),
                 const SizedBox(height: 18),
@@ -82,7 +92,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                 Text('هل أنت متأكد من الخروج؟', style: DS.body, textAlign: TextAlign.center),
                 const SizedBox(height: 24),
                 Row(children: [
-                  Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء'))),
+                  Expanded(child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('إلغاء'),
+                  )),
                   const SizedBox(width: 12),
                   Expanded(child: ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: DS.error),
@@ -97,13 +110,16 @@ class _AdminDashboardState extends State<AdminDashboard>
       ),
     );
     if (ok != true) return;
+    await FirebaseMessagingService.onLogout(); // ✅ حذف FCM token
     await FirebaseAuth.instance.signOut();
     if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
   }
 
   @override
   Widget build(BuildContext context) {
+    final uid  = FirebaseAuth.instance.currentUser?.uid ?? '';
     final isWide = MediaQuery.of(context).size.width >= 800;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -114,7 +130,10 @@ class _AdminDashboardState extends State<AdminDashboard>
             IconButton(
               icon: Container(
                 width: 38, height: 38,
-                decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: const Icon(Icons.logout_rounded, size: 18, color: Color(0xFFEF4444)),
               ),
               onPressed: _logout,
@@ -123,7 +142,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           ],
         ),
         body: isWide
-            ? Row(children: [_buildSidebar(), Expanded(child: _buildPage())])
+            ? Row(children: [_buildSidebar(uid), Expanded(child: _buildPage())])
             : _buildPage(),
         bottomNavigationBar: isWide ? null : GlassCard(
           borderRadius: 0,
@@ -135,14 +154,34 @@ class _AdminDashboardState extends State<AdminDashboard>
             elevation: 0,
             selectedIndex: _selectedIndex,
             onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-            destinations: _nav.map((n) => NavigationDestination(icon: Icon(n.icon), label: n.label)).toList(),
+            destinations: _nav.asMap().entries.map((e) {
+              // ✅ Badge على الإشعارات فقط
+              if (e.key == 1) {
+                return NavigationDestination(
+                  icon: StreamBuilder<int>(
+                    stream: NotificationService.streamUnreadCount(uid),
+                    builder: (_, snap) {
+                      final count = snap.data ?? 0;
+                      return Badge(
+                        isLabelVisible: count > 0,
+                        label: Text('$count'),
+                        backgroundColor: DS.error,
+                        child: Icon(e.value.icon),
+                      );
+                    },
+                  ),
+                  label: e.value.label,
+                );
+              }
+              return NavigationDestination(icon: Icon(e.value.icon), label: e.value.label);
+            }).toList(),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSidebar() {
+  Widget _buildSidebar(String uid) {
     return GlassCard(
       borderRadius: 0, padding: EdgeInsets.zero, sigmaX: 30, sigmaY: 30,
       backgroundColor: DS.bgCard.withValues(alpha: 0.5),
@@ -184,9 +223,28 @@ class _AdminDashboardState extends State<AdminDashboard>
                     border: Border.all(color: sel ? Colors.transparent : DS.border.withValues(alpha: 0.3)),
                   ),
                   child: Row(children: [
-                    Icon(e.value.icon, size: 22, color: sel ? Colors.white : DS.textSecondary),
+                    // ✅ Badge في الـ Sidebar أيضاً
+                    e.key == 1
+                        ? StreamBuilder<int>(
+                      stream: NotificationService.streamUnreadCount(uid),
+                      builder: (_, snap) {
+                        final count = snap.data ?? 0;
+                        return Badge(
+                          isLabelVisible: count > 0,
+                          label: Text('$count'),
+                          backgroundColor: DS.error,
+                          child: Icon(e.value.icon, size: 22,
+                              color: sel ? Colors.white : DS.textSecondary),
+                        );
+                      },
+                    )
+                        : Icon(e.value.icon, size: 22, color: sel ? Colors.white : DS.textSecondary),
                     const SizedBox(width: 14),
-                    Text(e.value.label, style: TextStyle(fontSize: 15, fontWeight: sel ? FontWeight.w700 : FontWeight.w500, color: sel ? Colors.white : DS.textPrimary)),
+                    Text(e.value.label, style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                      color: sel ? Colors.white : DS.textPrimary,
+                    )),
                     const Spacer(),
                     if (sel) const Icon(Icons.chevron_left_rounded, color: Colors.white, size: 18),
                   ]),
@@ -206,7 +264,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               child: Row(children: [
                 const Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)),
                 const SizedBox(width: 12),
-                Text('تسجيل الخروج', style: DS.body.copyWith(color: const Color(0xFFEF4444), fontWeight: FontWeight.w600)),
+                Text('تسجيل الخروج', style: DS.body.copyWith(
+                    color: const Color(0xFFEF4444), fontWeight: FontWeight.w600)),
               ]),
             ),
           ),

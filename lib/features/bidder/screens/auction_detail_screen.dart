@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:auction_app2/shared/models/auction_model.dart';
 import 'package:auction_app2/shared/models/bid_model.dart';
 import 'package:auction_app2/core/services/firebase/firestore_service.dart';
@@ -54,6 +55,20 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
     _contentAnim.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _openGallery(List<String> images, int index) {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => _GalleryScreen(images: images, initialIndex: index),
+    ));
+  }
+
+  Future<void> _openMap(String location) async {
+    final encoded = Uri.encodeComponent(location);
+    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$encoded');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _placeBid(AuctionModel auction) async {
@@ -258,12 +273,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
     ) ?? false;
   }
 
-  void _openGallery(List<String> images, int index) {
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => _GalleryScreen(images: images, initialIndex: index),
-    ));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -293,7 +302,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
                 physics: const BouncingScrollPhysics(),
                 slivers: [
 
-                  // ── SliverAppBar مع Gallery ──
+                  // ── SliverAppBar ──
                   SliverAppBar(
                     expandedHeight: 320,
                     pinned: true,
@@ -324,26 +333,21 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
                             color: DS.gold.withValues(alpha: 0.4))),
                       )
                           : Stack(children: [
-                        // PageView للصور
                         PageView.builder(
                           controller: _pageController,
                           itemCount: allImages.length,
                           onPageChanged: (i) => setState(() => _currentImageIndex = i),
                           itemBuilder: (_, i) => GestureDetector(
                             onTap: () => _openGallery(allImages, i),
-                            child: Image.network(
-                              allImages[i],
-                              fit: BoxFit.cover,
+                            child: Image.network(allImages[i], fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Container(
                                 color: DS.bgCard,
-                                child: const Center(child: Icon(
-                                    Icons.broken_image_rounded,
+                                child: const Center(child: Icon(Icons.broken_image_rounded,
                                     color: DS.textMuted, size: 48)),
                               ),
                             ),
                           ),
                         ),
-                        // Gradient overlay
                         Container(decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [Colors.transparent, DS.bg.withValues(alpha: 0.8), DS.bg],
@@ -352,7 +356,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
                             stops: const [0.4, 0.8, 1.0],
                           ),
                         )),
-                        // Dots indicator
                         if (allImages.length > 1)
                           Positioned(
                             bottom: 16, left: 0, right: 0,
@@ -371,20 +374,30 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
                                   )),
                             ),
                           ),
-                        // عداد الصور
                         if (allImages.length > 1)
                           Positioned(
                             top: 50, left: 16,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                              decoration: BoxDecoration(color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(20)),
                               child: Text('${_currentImageIndex + 1}/${allImages.length}',
                                   style: const TextStyle(color: Colors.white, fontSize: 12)),
                             ),
                           ),
+                        Positioned(
+                          top: 50, right: 16,
+                          child: GestureDetector(
+                            onTap: () => _openGallery(allImages, _currentImageIndex),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(20)),
+                              child: const Icon(Icons.fullscreen_rounded,
+                                  color: Colors.white, size: 20),
+                            ),
+                          ),
+                        ),
                       ]),
                     ),
                   ),
@@ -396,6 +409,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(20, 0, 20, isActive ? 140 : 100),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
                           Row(children: [
                             _badgeForStatus(auction.status),
                             const Spacer(),
@@ -419,10 +433,10 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
                               child: Text(auction.description, style: DS.body)),
                           const SizedBox(height: 20),
 
-                          // Thumbnail strip
+                          // ✅ Thumbnail strip
                           if (allImages.length > 1) ...[
                             SizedBox(
-                              height: 64,
+                              height: 72,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 itemCount: allImages.length,
@@ -433,19 +447,24 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
                                         curve: Curves.easeInOut);
                                     setState(() => _currentImageIndex = i);
                                   },
+                                  onLongPress: () => _openGallery(allImages, i),
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
                                     margin: const EdgeInsets.only(left: 8),
-                                    width: 64, height: 64,
+                                    width: 72, height: 72,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: _currentImageIndex == i ? DS.purple : DS.border,
-                                        width: _currentImageIndex == i ? 2 : 1,
+                                        width: _currentImageIndex == i ? 2.5 : 1,
                                       ),
+                                      boxShadow: _currentImageIndex == i ? [
+                                        BoxShadow(color: DS.purple.withValues(alpha: 0.3),
+                                            blurRadius: 8, offset: const Offset(0, 2))
+                                      ] : null,
                                     ),
                                     child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(11),
+                                      borderRadius: BorderRadius.circular(10),
                                       child: Image.network(allImages[i], fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) => const Icon(
                                             Icons.broken_image_rounded, color: DS.textMuted),
@@ -454,6 +473,82 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
                                   ),
                                 ),
                               ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+
+                          // ✅ Dynamic Details حسب الفئة
+                          if (auction.details != null && auction.details!.isNotEmpty) ...[
+                            _CategoryDetailsWidget(
+                              category: auction.category ?? '',
+                              details: auction.details!,
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+
+                          // ✅ معلومات المزاد (يوم المعاينة + الموقع)
+                          if (auction.inspectionDay != null || auction.location != null) ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: DS.bgCard,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: DS.border),
+                              ),
+                              child: Column(children: [
+                                if (auction.inspectionDay != null) ...[
+                                  Row(children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: DS.purple.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(Icons.event_rounded, color: DS.purple, size: 18),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Text('يوم المعاينة', style: DS.label),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${auction.inspectionDay!.day}/${auction.inspectionDay!.month}/${auction.inspectionDay!.year}',
+                                        style: DS.titleS,
+                                      ),
+                                    ]),
+                                  ]),
+                                  if (auction.location != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      child: Divider(color: DS.border, height: 1),
+                                    ),
+                                ],
+                                if (auction.location != null)
+                                  GestureDetector(
+                                    onTap: () => _openMap(auction.location!),
+                                    child: Row(children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: DS.error.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: const Icon(Icons.location_on_rounded,
+                                            color: DS.error, size: 18),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('الموقع', style: DS.label),
+                                          const SizedBox(height: 2),
+                                          Text(auction.location!,
+                                              style: DS.titleS.copyWith(color: DS.purple)),
+                                        ],
+                                      )),
+                                      Icon(Icons.open_in_new_rounded, color: DS.purple, size: 16),
+                                    ]),
+                                  ),
+                              ]),
                             ),
                             const SizedBox(height: 20),
                           ],
@@ -505,18 +600,14 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
                 ],
               ),
 
-              // ── Bottom Bar مع الضمان ✅ ──
+              // ── Bottom Bar ──
               if (isActive)
                 StreamBuilder<DocumentSnapshot>(
                   stream: FirebaseFirestore.instance
-                      .collection('auctions')
-                      .doc(widget.auctionId)
-                      .snapshots(),
+                      .collection('auctions').doc(widget.auctionId).snapshots(),
                   builder: (_, auctionSnap) {
                     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
                     final data = auctionSnap.data?.data() as Map<String, dynamic>?;
-
-                    // ✅ التصحيح: depositPaidBy بدل deposits
                     final depositPaidBy = List<String>.from(data?['depositPaidBy'] ?? []);
                     final hasPaid = depositPaidBy.contains(uid);
 
@@ -573,7 +664,178 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen>
   }
 }
 
-// ── Fullscreen Gallery Screen ──
+// ══════════════════════════════════════════════════════════════════════════════
+// ✅ DYNAMIC DETAILS WIDGET
+// ══════════════════════════════════════════════════════════════════════════════
+class _CategoryDetailsWidget extends StatelessWidget {
+  final String category;
+  final Map<String, dynamic> details;
+
+  const _CategoryDetailsWidget({required this.category, required this.details});
+
+  @override
+  Widget build(BuildContext context) {
+    final config = _getCategoryConfig(category);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: DS.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: DS.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // ── Header ──
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: DS.purple.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(config.icon, color: DS.purple, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Text(config.title, style: DS.titleS),
+        ]),
+        const SizedBox(height: 14),
+        const Divider(color: DS.border, height: 1),
+        const SizedBox(height: 14),
+
+        // ── Fields ──
+        ...config.fields.map((field) {
+          final value = details[field.key];
+          if (value == null || value.toString().isEmpty) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(children: [
+              Text(field.emoji, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              Text('${field.label}:', style: DS.label.copyWith(color: DS.textSecondary)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '${value}${field.unit != null ? ' ${field.unit}' : ''}',
+                  style: DS.titleS.copyWith(fontSize: 13),
+                  textAlign: TextAlign.left,
+                ),
+              ),
+            ]),
+          );
+        }),
+      ]),
+    );
+  }
+
+  _CategoryConfig _getCategoryConfig(String category) {
+    final cat = category.toLowerCase();
+
+    if (cat.contains('سيارة') || cat.contains('مركبة') || cat.contains('car')) {
+      return _CategoryConfig(
+        icon: Icons.directions_car_rounded,
+        title: 'معلومات السيارة',
+        fields: [
+          _Field('brand',        '🚘', 'الماركة'),
+          _Field('model',        '🚗', 'الموديل'),
+          _Field('year',         '📅', 'سنة الصنع'),
+          _Field('engine',       '⚙️', 'المحرك'),
+          _Field('fuel',         '⛽', 'الوقود'),
+          _Field('mileage',      '📏', 'المسافة', unit: 'كم'),
+          _Field('transmission', '🔄', 'ناقل الحركة'),
+          _Field('color',        '🎨', 'اللون'),
+          _Field('condition',    '✅', 'الحالة'),
+        ],
+      );
+    }
+
+    if (cat.contains('عقار') || cat.contains('شقة') || cat.contains('بيت') || cat.contains('real')) {
+      return _CategoryConfig(
+        icon: Icons.home_rounded,
+        title: 'معلومات العقار',
+        fields: [
+          _Field('type',     '🏢', 'النوع'),
+          _Field('location', '📍', 'الموقع'),
+          _Field('area',     '📐', 'المساحة', unit: 'م²'),
+          _Field('rooms',    '🛏', 'عدد الغرف'),
+          _Field('floor',    '🏗', 'الطابق'),
+          _Field('age',      '📅', 'عمر البناء', unit: 'سنة'),
+          _Field('condition','✅', 'الحالة'),
+        ],
+      );
+    }
+
+    if (cat.contains('إلكترون') || cat.contains('جهاز') || cat.contains('tech') || cat.contains('laptop') || cat.contains('هاتف')) {
+      return _CategoryConfig(
+        icon: Icons.devices_rounded,
+        title: 'المواصفات التقنية',
+        fields: [
+          _Field('type',      '🖥', 'النوع'),
+          _Field('brand',     '🏷', 'الماركة'),
+          _Field('model',     '📱', 'الموديل'),
+          _Field('ram',       '🧠', 'RAM',      unit: 'GB'),
+          _Field('storage',   '💾', 'التخزين'),
+          _Field('processor', '⚡', 'المعالج'),
+          _Field('screen',    '🖥', 'الشاشة'),
+          _Field('condition', '✅', 'الحالة'),
+        ],
+      );
+    }
+
+    if (cat.contains('أثاث') || cat.contains('furniture')) {
+      return _CategoryConfig(
+        icon: Icons.chair_rounded,
+        title: 'معلومات الأثاث',
+        fields: [
+          _Field('type',      '🪑', 'النوع'),
+          _Field('material',  '🪵', 'المادة'),
+          _Field('color',     '🎨', 'اللون'),
+          _Field('dimensions','📐', 'الأبعاد'),
+          _Field('condition', '✅', 'الحالة'),
+        ],
+      );
+    }
+
+    if (cat.contains('مجوهرات') || cat.contains('ذهب') || cat.contains('jewelry')) {
+      return _CategoryConfig(
+        icon: Icons.diamond_rounded,
+        title: 'معلومات المجوهرات',
+        fields: [
+          _Field('type',      '💍', 'النوع'),
+          _Field('material',  '✨', 'المادة'),
+          _Field('weight',    '⚖️', 'الوزن', unit: 'غ'),
+          _Field('carat',     '💎', 'العيار'),
+          _Field('condition', '✅', 'الحالة'),
+        ],
+      );
+    }
+
+    // Default — يعرض كل الـ fields اللي فيها قيمة
+    return _CategoryConfig(
+      icon: Icons.info_outline_rounded,
+      title: 'تفاصيل إضافية',
+      fields: details.keys.map((k) => _Field(k, 'ℹ️', k)).toList(),
+    );
+  }
+}
+
+class _CategoryConfig {
+  final IconData icon;
+  final String title;
+  final List<_Field> fields;
+  const _CategoryConfig({required this.icon, required this.title, required this.fields});
+}
+
+class _Field {
+  final String key;
+  final String emoji;
+  final String label;
+  final String? unit;
+  const _Field(this.key, this.emoji, this.label, {this.unit});
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FULLSCREEN GALLERY
+// ══════════════════════════════════════════════════════════════════════════════
 class _GalleryScreen extends StatefulWidget {
   final List<String> images;
   final int initialIndex;
@@ -612,10 +874,15 @@ class _GalleryScreenState extends State<_GalleryScreen> {
         itemCount: widget.images.length,
         onPageChanged: (i) => setState(() => _current = i),
         itemBuilder: (_, i) => InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 4.0,
           child: Center(
             child: Image.network(
               widget.images[i],
               fit: BoxFit.contain,
+              loadingBuilder: (_, child, progress) => progress == null
+                  ? child
+                  : const Center(child: CircularProgressIndicator(color: Colors.white)),
               errorBuilder: (_, __, ___) => const Icon(
                   Icons.broken_image_rounded, color: Colors.white54, size: 64),
             ),

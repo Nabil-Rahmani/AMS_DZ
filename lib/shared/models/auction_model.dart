@@ -1,13 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum AuctionStatus {
-  draft,      // مسودة عند البائع
-  submitted,  // أرسله البائع للمراجعة
-  approved,   // وافق عليه الأدمين + حدد الوقت
-  active,     // المزاد شغال الآن
-  ended,      // انتهى المزاد
-  rejected,   // رفضه الأدمين
-  closed;     // أُغلق نهائياً
+  draft,
+  submitted,
+  approved,
+  active,
+  ended,
+  rejected,
+  closed;
 
   String get label {
     switch (this) {
@@ -36,33 +36,32 @@ class AuctionModel {
   final String organizerId;
   final String organizerName;
 
-  // السعر — البائع يحدده، الأدمين يعدّله إذا لزم
   final double startingPrice;
-  final double? adminAdjustedPrice; // الأدمين عدّل السعر
+  final double? adminAdjustedPrice;
   final double? currentPrice;
   final double? minBidIncrement;
 
-  // التواريخ — الأدمين يحددها
-  final DateTime? inspectionDay;  // يوم المعاينة
-  final DateTime? startTime;      // بداية المزاد
-  final DateTime? endDateTime;    // نهاية المزاد
+  final DateTime? inspectionDay;
+  final DateTime? startTime;
+  final DateTime? endDateTime;
 
-  // معلومات إضافية
   final String? category;
   final String? location;
   final String? imageUrl;
   final List<String>? imageUrls;
   final int itemCount;
 
-  // نتيجة المزاد
   final String? winnerId;
   final String? rejectionReason;
-  final String? adminNote; // ملاحظة الأدمين على السعر
+  final String? adminNote;
 
   final DateTime createdAt;
-  // ── الضمان ──
-  final double? depositAmount;         // 10% من startingPrice
-  final List<String>? depositPaidBy;   // IDs المزايدين اللي دفعوا
+
+  final double? depositAmount;
+  final List<String>? depositPaidBy;
+
+  // ✅ Dynamic Details حسب الفئة
+  final Map<String, dynamic>? details;
 
   AuctionModel({
     required this.id,
@@ -89,13 +88,13 @@ class AuctionModel {
     required this.createdAt,
     this.depositAmount,
     this.depositPaidBy,
+    this.details,
   });
 
-  // السعر الفعلي = السعر المعدّل من الأدمين أو السعر الأصلي
   double get effectiveStartingPrice => adminAdjustedPrice ?? startingPrice;
-   //gettes
   double get deposit => (adminAdjustedPrice ?? startingPrice) * 0.1;
   bool hasUserPaidDeposit(String uid) => depositPaidBy?.contains(uid) ?? false;
+
   factory AuctionModel.fromMap(Map<String, dynamic> map, String id) {
     return AuctionModel(
       id: id,
@@ -106,42 +105,35 @@ class AuctionModel {
       organizerName: map['organizerName'] ?? '',
       startingPrice: (map['startingPrice'] ?? 0.0).toDouble(),
       adminAdjustedPrice: map['adminAdjustedPrice'] != null
-          ? (map['adminAdjustedPrice']).toDouble()
-          : null,
+          ? (map['adminAdjustedPrice']).toDouble() : null,
       currentPrice: map['currentPrice'] != null
-          ? (map['currentPrice']).toDouble()
-          : null,
+          ? (map['currentPrice']).toDouble() : null,
       minBidIncrement: map['minBidIncrement'] != null
-          ? (map['minBidIncrement']).toDouble()
-          : null,
+          ? (map['minBidIncrement']).toDouble() : null,
       inspectionDay: map['inspectionDay'] != null
-          ? (map['inspectionDay'] as Timestamp).toDate()
-          : null,
+          ? (map['inspectionDay'] as Timestamp).toDate() : null,
       startTime: map['startTime'] != null
-          ? (map['startTime'] as Timestamp).toDate()
-          : null,
+          ? (map['startTime'] as Timestamp).toDate() : null,
       endDateTime: map['endTime'] != null
-          ? (map['endTime'] as Timestamp).toDate()
-          : null,
+          ? (map['endTime'] as Timestamp).toDate() : null,
       category: map['category'],
       location: map['location'],
       imageUrl: map['imageUrl'],
       imageUrls: map['imageUrls'] != null
-          ? List<String>.from(map['imageUrls'])
-          : null,
+          ? List<String>.from(map['imageUrls']) : null,
       itemCount: map['itemCount'] ?? 1,
       winnerId: map['winnerId'],
       rejectionReason: map['rejectionReason'],
       adminNote: map['adminNote'],
       createdAt: map['createdAt'] != null
-          ? (map['createdAt'] as Timestamp).toDate()
-          : DateTime.now(),
+          ? (map['createdAt'] as Timestamp).toDate() : DateTime.now(),
       depositAmount: map['depositAmount'] != null
-          ? (map['depositAmount']).toDouble()
-          : null,
+          ? (map['depositAmount']).toDouble() : null,
       depositPaidBy: map['depositPaidBy'] != null
-          ? List<String>.from(map['depositPaidBy'])
-          : null,
+          ? List<String>.from(map['depositPaidBy']) : null,
+      // ✅
+      details: map['details'] != null
+          ? Map<String, dynamic>.from(map['details']) : null,
     );
   }
 
@@ -159,8 +151,7 @@ class AuctionModel {
     if (adminAdjustedPrice != null) 'adminAdjustedPrice': adminAdjustedPrice,
     if (currentPrice != null) 'currentPrice': currentPrice,
     if (minBidIncrement != null) 'minBidIncrement': minBidIncrement,
-    if (inspectionDay != null)
-      'inspectionDay': Timestamp.fromDate(inspectionDay!),
+    if (inspectionDay != null) 'inspectionDay': Timestamp.fromDate(inspectionDay!),
     if (startTime != null) 'startTime': Timestamp.fromDate(startTime!),
     if (endDateTime != null) 'endTime': Timestamp.fromDate(endDateTime!),
     if (category != null) 'category': category,
@@ -174,6 +165,7 @@ class AuctionModel {
     'createdAt': Timestamp.fromDate(createdAt),
     if (depositAmount != null) 'depositAmount': depositAmount,
     if (depositPaidBy != null) 'depositPaidBy': depositPaidBy,
+    if (details != null) 'details': details,
   };
 
   AuctionModel copyWith({
@@ -192,6 +184,7 @@ class AuctionModel {
     String? winnerId,
     String? rejectionReason,
     String? adminNote,
+    Map<String, dynamic>? details,
   }) {
     return AuctionModel(
       id: id,
@@ -214,6 +207,7 @@ class AuctionModel {
       rejectionReason: rejectionReason ?? this.rejectionReason,
       adminNote: adminNote ?? this.adminNote,
       createdAt: createdAt,
+      details: details ?? this.details,
     );
   }
 }

@@ -1,9 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:auction_app2/core/services/auth/auth_service.dart';
-import 'package:auction_app2/shared/models/user_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:auction_app2/core/services/firebase_messaging_service.dart';
 import 'package:auction_app2/core/routes/app_routes.dart';
 import 'package:auction_app2/features/auth/screens/login_screen.dart';
+import 'package:auction_app2/features/bidder/screens/interests_onboarding_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -23,8 +24,13 @@ class AuthGate extends StatelessWidget {
           return const LoginScreen();
         }
 
-        return FutureBuilder<UserModel?>(
-          future: AuthService().getUserModel(snapshot.data!.uid),
+        final firebaseUser = snapshot.data!;
+
+        return FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('users')
+              .doc(firebaseUser.uid)
+              .get(),
           builder: (context, userSnapshot) {
             if (userSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
@@ -32,17 +38,30 @@ class AuthGate extends StatelessWidget {
               );
             }
 
-            final user = userSnapshot.data;
-            if (user == null) return const LoginScreen();
+            if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+              FirebaseAuth.instance.signOut();
+              return const LoginScreen();
+            }
 
-            // Redirect based on role
-            switch (user.role) {
-              case UserRole.admin:
+            final data       = userSnapshot.data!.data() as Map<String, dynamic>;
+            final isVerified = data['isVerified'] as bool? ?? false;
+
+            // ✅ غير متحقق — ابقى في مكانك (شاشة التحقق شغالة)
+            if (!isVerified) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final role = data['role'] as String? ?? 'bidder';
+
+            switch (role) {
+              case 'admin':
                 return const AdminRedirect();
-              case UserRole.organizer:
+              case 'organizer':
                 return const OrganizerRedirect();
-              case UserRole.bidder:
-                return const BidderRedirect();
+              default:
+                return BidderInterestsCheck(uid: firebaseUser.uid);
             }
           },
         );
@@ -51,36 +70,111 @@ class AuthGate extends StatelessWidget {
   }
 }
 
-// Redirect helpers — these push the correct route
-class AdminRedirect extends StatelessWidget {
+// ✅ يتحقق إذا المزايد حدد اهتماماته أو لا
+class BidderInterestsCheck extends StatefulWidget {
+  final String uid;
+  const BidderInterestsCheck({super.key, required this.uid});
+
+  @override
+  State<BidderInterestsCheck> createState() => _BidderInterestsCheckState();
+}
+
+class _BidderInterestsCheckState extends State<BidderInterestsCheck> {
+  @override
+  void initState() {
+    super.initState();
+    FirebaseMessagingService.onLogin();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.uid)
+        .get();
+    final data         = doc.data();
+    final hasInterests = data?['interests'] != null &&
+        (data!['interests'] as List).isNotEmpty;
+
+    if (!mounted) return;
+
+    if (hasInterests) {
+      Navigator.pushReplacementNamed(context, AppRoutes.browseAuctions);
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const InterestsScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
+}
+
+// ── Admin Redirect ──
+class AdminRedirect extends StatefulWidget {
   const AdminRedirect({super.key});
   @override
-  Widget build(BuildContext context) {
+  State<AdminRedirect> createState() => _AdminRedirectState();
+}
+
+class _AdminRedirectState extends State<AdminRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    FirebaseMessagingService.onLogin();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
     });
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
 
-class OrganizerRedirect extends StatelessWidget {
+// ── Organizer Redirect ──
+class OrganizerRedirect extends StatefulWidget {
   const OrganizerRedirect({super.key});
   @override
-  Widget build(BuildContext context) {
+  State<OrganizerRedirect> createState() => _OrganizerRedirectState();
+}
+
+class _OrganizerRedirectState extends State<OrganizerRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    FirebaseMessagingService.onLogin();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.pushReplacementNamed(context, AppRoutes.organizerDashboard);
     });
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
 
-class BidderRedirect extends StatelessWidget {
+// ── Bidder Redirect ──
+class BidderRedirect extends StatefulWidget {
   const BidderRedirect({super.key});
   @override
-  Widget build(BuildContext context) {
+  State<BidderRedirect> createState() => _BidderRedirectState();
+}
+
+class _BidderRedirectState extends State<BidderRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    FirebaseMessagingService.onLogin();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.pushReplacementNamed(context, AppRoutes.browseAuctions);
     });
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
 }

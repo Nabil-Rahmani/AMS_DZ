@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:auction_app2/shared/models/auction_model.dart';
+import 'package:auction_app2/core/services/notification_service.dart';
 import '../../../core/constants/ds_colors.dart';
 import '../../../core/widgets/ds_widgets.dart';
-import '../../../core/routes/app_routes.dart';
 import '../../auth/screens/profile_page.dart';
+import '../../notifications/notifications_screen.dart';
+import '../../wallet/wallet_screen.dart';
 import '../widgets/bidder_auction_card.dart';
 import '../widgets/auction_filter_sheet.dart';
 import 'my_bids_screen.dart';
@@ -21,12 +23,15 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
 
   late final List<Widget> _pages = [
     const _AuctionsHome(),
-    const _WalletTab(),
+    const NotificationsScreen(),
+    const WalletScreen(),  // ✅ مباشرة بدل _WalletTab
     const ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -34,62 +39,64 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
         body: IndexedStack(index: _selectedIndex, children: _pages),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
+            color: DS.bgCard,
             border: Border(top: BorderSide(color: DS.border.withValues(alpha: 0.5))),
           ),
-          child: ClipRRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: NavigationBar(
-                backgroundColor: DS.bgCard.withValues(alpha: 0.8),
-                elevation: 0,
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-                indicatorColor: DS.purple.withValues(alpha: 0.1),
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.gavel_rounded),
-                    selectedIcon: Icon(Icons.gavel_rounded, color: DS.purple),
-                    label: 'المزادات',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.account_balance_wallet_outlined),
-                    selectedIcon: Icon(Icons.account_balance_wallet_rounded, color: DS.purple),
-                    label: 'محفظتي',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.person_outline_rounded),
-                    selectedIcon: Icon(Icons.person_rounded, color: DS.purple),
-                    label: 'حسابي',
-                  ),
-                ],
+          child: NavigationBar(
+            backgroundColor: DS.bgCard,
+            elevation: 0,
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+            indicatorColor: DS.purple.withValues(alpha: 0.1),
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.gavel_rounded),
+                selectedIcon: Icon(Icons.gavel_rounded, color: DS.purple),
+                label: 'المزادات',
               ),
-            ),
+              NavigationDestination(
+                icon: StreamBuilder<int>(
+                  stream: NotificationService.streamUnreadCount(uid),
+                  builder: (_, snap) {
+                    final count = snap.data ?? 0;
+                    return Badge(
+                      isLabelVisible: count > 0,
+                      label: Text('$count'),
+                      backgroundColor: DS.error,
+                      child: const Icon(Icons.notifications_outlined),
+                    );
+                  },
+                ),
+                selectedIcon: StreamBuilder<int>(
+                  stream: NotificationService.streamUnreadCount(uid),
+                  builder: (_, snap) {
+                    final count = snap.data ?? 0;
+                    return Badge(
+                      isLabelVisible: count > 0,
+                      label: Text('$count'),
+                      backgroundColor: DS.error,
+                      child: const Icon(Icons.notifications_rounded, color: DS.purple),
+                    );
+                  },
+                ),
+                label: 'الإشعارات',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.account_balance_wallet_outlined),
+                selectedIcon: Icon(Icons.account_balance_wallet_rounded, color: DS.purple),
+                label: 'محفظتي',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: Icon(Icons.person_rounded, color: DS.purple),
+                label: 'حسابي',
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-}
-
-// ── Tab المحفظة ───────────────────────────────────────
-class _WalletTab extends StatefulWidget {
-  const _WalletTab();
-  @override
-  State<_WalletTab> createState() => _WalletTabState();
-}
-
-class _WalletTabState extends State<_WalletTab> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Navigator.pushNamed(context, AppRoutes.wallet);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      const Center(child: CircularProgressIndicator(color: DS.purple));
 }
 
 // ── صفحة المزادات الرئيسية ────────────────────────────
@@ -101,16 +108,19 @@ class _AuctionsHome extends StatefulWidget {
 
 class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
-  String _query = '';
+  String _query    = '';
   String _category = 'الكل';
-  String _status = 'active';
+  String _status   = 'active';
   late TabController _tabCtrl;
 
-  final List<String> _cats = ['الكل', 'عقارات', 'سيارات', 'إلكترونيات', 'أثاث', 'معدات', 'أخرى'];
+  final List<String> _cats = [
+    'الكل', 'عقارات', 'سيارات', 'إلكترونيات', 'أثاث', 'معدات', 'أخرى'
+  ];
+
   final _statusTabs = [
-    {'label': 'نشط',   'value': 'active',   'icon': Icons.bolt_rounded,     'color': DS.success},
-    {'label': 'قادم',  'value': 'approved', 'icon': Icons.schedule_rounded,  'color': DS.purple},
-    {'label': 'منتهي', 'value': 'ended',    'icon': Icons.flag_rounded,      'color': DS.textMuted},
+    {'label': 'نشط',   'value': 'active',   'icon': Icons.bolt_rounded,    'color': DS.success},
+    {'label': 'قادم',  'value': 'approved', 'icon': Icons.schedule_rounded, 'color': DS.purple},
+    {'label': 'منتهي', 'value': 'ended',    'icon': Icons.flag_rounded,     'color': DS.textMuted},
   ];
 
   @override
@@ -125,11 +135,17 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
   }
 
   @override
-  void dispose() { _tabCtrl.dispose(); _searchCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _tabCtrl.dispose();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   void _showFilterModal() {
     showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) => AuctionFilterSheet(
         initialCategory: _category,
         categories: _cats,
@@ -144,12 +160,15 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
         .where('status', isEqualTo: _status)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => AuctionModel.fromMap(d.data(), d.id)).toList());
+        .map((s) => s.docs
+        .map((d) => AuctionModel.fromMap(d.data(), d.id))
+        .toList());
   }
 
   List<AuctionModel> _filter(List<AuctionModel> list) {
     return list.where((a) {
-      final matchQ = _query.isEmpty || a.title.toLowerCase().contains(_query.toLowerCase());
+      final matchQ = _query.isEmpty ||
+          a.title.toLowerCase().contains(_query.toLowerCase());
       final matchC = _category == 'الكل' || a.category == _category;
       return matchQ && matchC;
     }).toList();
@@ -160,16 +179,25 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
     return NestedScrollView(
       headerSliverBuilder: (ctx, inner) => [
         SliverAppBar(
-          expandedHeight: 220, floating: false, pinned: true, backgroundColor: DS.bg,
+          expandedHeight: 220,
+          floating: false,
+          pinned: true,
+          backgroundColor: DS.bg,
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(children: [
               const PurpleOrb(size: 260, alignment: Alignment.topLeft, opacity: 0.5),
               const PurpleOrb(size: 180, alignment: Alignment.bottomRight, opacity: 0.2),
               SafeArea(child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const FadeSlideIn(duration: Duration(milliseconds: 600), child: AmsLogo(size: 40)),
-                ]),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const FadeSlideIn(
+                      duration: Duration(milliseconds: 600),
+                      child: AmsLogo(size: 40),
+                    ),
+                  ],
+                ),
               )),
             ]),
           ),
@@ -177,10 +205,21 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
             IconButton(
               icon: Container(
                 width: 38, height: 38,
-                decoration: BoxDecoration(color: DS.bgCard, borderRadius: BorderRadius.circular(10), border: Border.all(color: DS.border), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4)]),
+                decoration: BoxDecoration(
+                  color: DS.bgCard,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: DS.border),
+                  boxShadow: [BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 4,
+                  )],
+                ),
                 child: const Icon(Icons.history_rounded, size: 18, color: DS.textSecondary),
               ),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyBidsScreen())),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyBidsScreen()),
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -196,21 +235,44 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
                     decoration: BoxDecoration(
                       color: DS.bgCard,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: DS.purple.withValues(alpha: 0.3), width: 1.5),
-                      boxShadow: [BoxShadow(color: DS.purple.withValues(alpha: 0.08), blurRadius: 15, offset: const Offset(0, 4))],
+                      border: Border.all(
+                        color: DS.purple.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
+                      boxShadow: [BoxShadow(
+                        color: DS.purple.withValues(alpha: 0.08),
+                        blurRadius: 15,
+                        offset: const Offset(0, 4),
+                      )],
                     ),
                     child: TextField(
                       controller: _searchCtrl,
-                      style: const TextStyle(color: DS.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        color: DS.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                       textDirection: TextDirection.rtl,
                       decoration: InputDecoration(
                         hintText: 'ابحث عن مزادات بالاسم...',
-                        hintStyle: TextStyle(color: DS.textMuted.withValues(alpha: 0.7), fontSize: 14),
+                        hintStyle: TextStyle(
+                          color: DS.textMuted.withValues(alpha: 0.7),
+                          fontSize: 14,
+                        ),
                         prefixIcon: const Icon(Icons.search_rounded, color: DS.purple, size: 22),
-                        border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none,
-                        filled: false, contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        border:        InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
                         suffixIcon: _query.isNotEmpty
-                            ? IconButton(icon: const Icon(Icons.close_rounded, size: 18, color: DS.textMuted), onPressed: () { _searchCtrl.clear(); setState(() => _query = ''); })
+                            ? IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 18, color: DS.textMuted),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                          },
+                        )
                             : null,
                       ),
                       onChanged: (v) => setState(() => _query = v),
@@ -218,61 +280,97 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
                   ),
                 ),
               ),
+
               Container(
-                height: 48, padding: const EdgeInsets.symmetric(horizontal: 24),
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(children: [
                   Expanded(child: GestureDetector(
                     onTap: _showFilterModal,
                     child: Container(
-                      height: 38, padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(color: DS.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: DS.border)),
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: DS.bgCard,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: DS.border),
+                      ),
                       child: Row(children: [
                         const Icon(Icons.tune_rounded, size: 16, color: DS.purple),
                         const SizedBox(width: 8),
-                        Text('تصفية الفئات', style: DS.body.copyWith(fontWeight: FontWeight.w600, color: DS.purple)),
+                        Text('تصفية الفئات',
+                            style: DS.body.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: DS.purple,
+                            )),
                         const Spacer(),
                         if (_category != 'الكل')
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: DS.purple, borderRadius: BorderRadius.circular(20)),
-                            child: Text(_category, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                            decoration: BoxDecoration(
+                              color: DS.purple,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(_category,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                )),
                           ),
-                        const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: DS.textMuted),
+                        const Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 18, color: DS.textMuted),
                       ]),
                     ),
                   )),
                 ]),
               ),
+
               const SizedBox(height: 8),
+
               Container(
-                decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: DS.divider))),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: DS.divider)),
+                ),
                 child: TabBar(
                   controller: _tabCtrl,
-                  tabs: _statusTabs.map((t) => Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(t['icon'] as IconData, size: 14),
-                    const SizedBox(width: 5),
-                    Text(t['label'] as String),
-                  ]))).toList(),
+                  tabs: _statusTabs.map((t) => Tab(
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(t['icon'] as IconData, size: 14),
+                      const SizedBox(width: 5),
+                      Text(t['label'] as String),
+                    ]),
+                  )).toList(),
                 ),
               ),
             ]),
           ),
         ),
       ],
+
       body: StreamBuilder<List<AuctionModel>>(
         stream: _stream(),
         builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: DS.purple));
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: DS.purple));
+          }
           final list = _filter(snap.data ?? []);
-          if (list.isEmpty) return DSEmpty(
-            icon: Icons.gavel_rounded,
-            title: 'لا توجد مزادات',
-            subtitle: 'جرّب فئة أو بحثاً مختلفاً',
-            onRefresh: () => setState(() { _query = ''; _category = 'الكل'; }),
-          );
+          if (list.isEmpty) {
+            return DSEmpty(
+              icon: Icons.gavel_rounded,
+              title: 'لا توجد مزادات',
+              subtitle: 'جرّب فئة أو بحثاً مختلفاً',
+              onRefresh: () => setState(() {
+                _query    = '';
+                _category = 'الكل';
+              }),
+            );
+          }
           return StaggeredListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-            itemCount: list.length, baseDelayMs: 80, staggerMs: 70,
+            itemCount: list.length,
+            baseDelayMs: 80,
+            staggerMs: 70,
             itemBuilder: (_, i) => BidderAuctionCard(auction: list[i]),
           );
         },

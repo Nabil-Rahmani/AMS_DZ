@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:auction_app2/shared/models/auction_model.dart';
+import 'package:auction_app2/core/services/favourites_service.dart';
 import '../../../core/constants/ds_colors.dart';
 import '../../../core/widgets/ds_widgets.dart';
 import '../screens/auction_detail_screen.dart';
@@ -36,11 +37,11 @@ class BidderAuctionCard extends StatelessWidget {
               auction.imageUrl != null && auction.imageUrl!.isNotEmpty
                   ? Image.network(auction.imageUrl!, height: 180, width: double.infinity, fit: BoxFit.cover)
                   : Container(
-                      height: 180,
-                      decoration: const BoxDecoration(gradient: DS.headerGradient),
-                      child: Center(child: Icon(Icons.gavel_rounded, size: 56,
-                          color: DS.gold.withValues(alpha: 0.5))),
-                    ),
+                height: 180,
+                decoration: const BoxDecoration(gradient: DS.headerGradient),
+                child: Center(child: Icon(Icons.gavel_rounded, size: 56,
+                    color: DS.gold.withValues(alpha: 0.5))),
+              ),
               Positioned.fill(child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -51,8 +52,14 @@ class BidderAuctionCard extends StatelessWidget {
                 ),
               )),
               Positioned(top: 14, right: 14, child: _statusBadge(auction.status, isActive)),
+
+              Positioned(
+                top: 10, left: 10,
+                child: _FavouriteButton(auctionId: auction.id),
+              ),
+
               if (auction.category != null)
-                Positioned(top: 14, left: 14, child: ClipRRect(
+                Positioned(bottom: 12, left: 14, child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
@@ -120,6 +127,70 @@ class BidderAuctionCard extends StatelessWidget {
   }
 }
 
+// ── زر المفضلة ───────────────────────────────────────
+class _FavouriteButton extends StatefulWidget {
+  final String auctionId;
+  const _FavouriteButton({required this.auctionId});
+  @override
+  State<_FavouriteButton> createState() => _FavouriteButtonState();
+}
+
+class _FavouriteButtonState extends State<_FavouriteButton>
+    with SingleTickerProviderStateMixin {
+  bool _isFav = false;
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _scale = Tween(begin: 1.0, end: 1.3).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+    _load();
+  }
+
+  Future<void> _load() async {
+    final fav = await FavouritesService.isFavourite(widget.auctionId);
+    if (mounted) setState(() => _isFav = fav);
+  }
+
+  Future<void> _toggle() async {
+    await FavouritesService.toggle(widget.auctionId);
+    setState(() => _isFav = !_isFav);
+    _ctrl.forward(from: 0);
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _toggle,
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: _isFav ? DS.error.withValues(alpha: 0.15) : Colors.black38,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: _isFav ? DS.error.withValues(alpha: 0.3) : Colors.white24,
+            ),
+          ),
+          child: Icon(
+            _isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            color: _isFav ? DS.error : Colors.white,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Timer المزاد ─────────────────────────────────────
 class LiveAuctionTimer extends StatefulWidget {
   final DateTime endTime;
   const LiveAuctionTimer({super.key, required this.endTime});
@@ -128,23 +199,36 @@ class LiveAuctionTimer extends StatefulWidget {
 }
 
 class _LiveAuctionTimerState extends State<LiveAuctionTimer> {
-  late Duration _rem;
-  late Timer _timer;
+  Duration _rem = Duration.zero;
+  Timer? _timer; // ✅ nullable بدل late
 
   @override
   void initState() {
     super.initState();
     _update();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) { if (mounted) setState(_update); });
+    // ✅ لا نبدأ timer إذا انتهى الوقت
+    if (!_rem.isNegative && _rem != Duration.zero) {
+      _timer = Timer.periodic(
+        const Duration(seconds: 1),
+            (_) { if (mounted) setState(_update); },
+      );
+    }
   }
 
   void _update() {
-    _rem = widget.endTime.difference(DateTime.now());
-    if (_rem.isNegative) { _rem = Duration.zero; _timer.cancel(); }
+    final diff = widget.endTime.difference(DateTime.now());
+    _rem = diff.isNegative ? Duration.zero : diff;
+    if (_rem == Duration.zero) {
+      _timer?.cancel();
+      _timer = null;
+    }
   }
 
   @override
-  void dispose() { _timer.cancel(); super.dispose(); }
+  void dispose() {
+    _timer?.cancel(); // ✅ آمن مع nullable
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
