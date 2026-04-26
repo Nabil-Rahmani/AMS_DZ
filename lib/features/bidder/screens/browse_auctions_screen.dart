@@ -24,7 +24,7 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
   late final List<Widget> _pages = [
     const _AuctionsHome(),
     const NotificationsScreen(),
-    const WalletScreen(),  // ✅ مباشرة بدل _WalletTab
+    const WalletScreen(),
     const ProfilePage(),
   ];
 
@@ -42,56 +42,69 @@ class _BrowseAuctionsScreenState extends State<BrowseAuctionsScreen> {
             color: DS.bgCard,
             border: Border(top: BorderSide(color: DS.border.withValues(alpha: 0.5))),
           ),
-          child: NavigationBar(
-            backgroundColor: DS.bgCard,
-            elevation: 0,
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-            indicatorColor: DS.purple.withValues(alpha: 0.1),
-            destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.gavel_rounded),
-                selectedIcon: Icon(Icons.gavel_rounded, color: DS.purple),
-                label: 'المزادات',
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              navigationBarTheme: NavigationBarThemeData(
+                backgroundColor:  DS.bgCard,
+                surfaceTintColor: Colors.transparent,
+                shadowColor:      Colors.transparent,
+                indicatorColor:   DS.purple.withValues(alpha: 0.1),
+                elevation:        0,
               ),
-              NavigationDestination(
-                icon: StreamBuilder<int>(
-                  stream: NotificationService.streamUnreadCount(uid),
-                  builder: (_, snap) {
-                    final count = snap.data ?? 0;
-                    return Badge(
-                      isLabelVisible: count > 0,
-                      label: Text('$count'),
-                      backgroundColor: DS.error,
-                      child: const Icon(Icons.notifications_outlined),
-                    );
-                  },
+            ),
+            child: NavigationBar(
+              backgroundColor:  DS.bgCard,
+              surfaceTintColor: Colors.transparent,
+              shadowColor:      Colors.transparent,
+              elevation:        0,
+              selectedIndex:    _selectedIndex,
+              onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+              indicatorColor: DS.purple.withValues(alpha: 0.1),
+              destinations: [
+                const NavigationDestination(
+                  icon:         Icon(Icons.gavel_rounded),
+                  selectedIcon: Icon(Icons.gavel_rounded, color: DS.purple),
+                  label:        'المزادات',
                 ),
-                selectedIcon: StreamBuilder<int>(
-                  stream: NotificationService.streamUnreadCount(uid),
-                  builder: (_, snap) {
-                    final count = snap.data ?? 0;
-                    return Badge(
-                      isLabelVisible: count > 0,
-                      label: Text('$count'),
-                      backgroundColor: DS.error,
-                      child: const Icon(Icons.notifications_rounded, color: DS.purple),
-                    );
-                  },
+                NavigationDestination(
+                  icon: StreamBuilder<int>(
+                    stream: NotificationService.streamUnreadCount(uid),
+                    builder: (_, snap) {
+                      final count = snap.data ?? 0;
+                      return Badge(
+                        isLabelVisible: count > 0,
+                        label:          Text('$count'),
+                        backgroundColor: DS.error,
+                        child: const Icon(Icons.notifications_outlined),
+                      );
+                    },
+                  ),
+                  selectedIcon: StreamBuilder<int>(
+                    stream: NotificationService.streamUnreadCount(uid),
+                    builder: (_, snap) {
+                      final count = snap.data ?? 0;
+                      return Badge(
+                        isLabelVisible: count > 0,
+                        label:          Text('$count'),
+                        backgroundColor: DS.error,
+                        child: const Icon(Icons.notifications_rounded, color: DS.purple),
+                      );
+                    },
+                  ),
+                  label: 'الإشعارات',
                 ),
-                label: 'الإشعارات',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.account_balance_wallet_outlined),
-                selectedIcon: Icon(Icons.account_balance_wallet_rounded, color: DS.purple),
-                label: 'محفظتي',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.person_outline_rounded),
-                selectedIcon: Icon(Icons.person_rounded, color: DS.purple),
-                label: 'حسابي',
-              ),
-            ],
+                const NavigationDestination(
+                  icon:         Icon(Icons.account_balance_wallet_outlined),
+                  selectedIcon: Icon(Icons.account_balance_wallet_rounded, color: DS.purple),
+                  label:        'محفظتي',
+                ),
+                const NavigationDestination(
+                  icon:         Icon(Icons.person_outline_rounded),
+                  selectedIcon: Icon(Icons.person_rounded, color: DS.purple),
+                  label:        'حسابي',
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -180,12 +193,12 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
       headerSliverBuilder: (ctx, inner) => [
         SliverAppBar(
           expandedHeight: 220,
-          floating: false,
-          pinned: true,
+          floating:       false,
+          pinned:         true,
           backgroundColor: DS.bg,
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(children: [
-              const PurpleOrb(size: 260, alignment: Alignment.topLeft, opacity: 0.5),
+              const PurpleOrb(size: 260, alignment: Alignment.topLeft,     opacity: 0.5),
               const PurpleOrb(size: 180, alignment: Alignment.bottomRight, opacity: 0.2),
               SafeArea(child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
@@ -240,30 +253,30 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
                         width: 1.5,
                       ),
                       boxShadow: [BoxShadow(
-                        color: DS.purple.withValues(alpha: 0.08),
+                        color:      DS.purple.withValues(alpha: 0.08),
                         blurRadius: 15,
-                        offset: const Offset(0, 4),
+                        offset:     const Offset(0, 4),
                       )],
                     ),
                     child: TextField(
                       controller: _searchCtrl,
                       style: const TextStyle(
-                        color: DS.textPrimary,
-                        fontSize: 14,
+                        color:      DS.textPrimary,
+                        fontSize:   14,
                         fontWeight: FontWeight.w600,
                       ),
                       textDirection: TextDirection.rtl,
                       decoration: InputDecoration(
-                        hintText: 'ابحث عن مزادات بالاسم...',
+                        hintText:  'ابحث عن مزادات بالاسم...',
                         hintStyle: TextStyle(
-                          color: DS.textMuted.withValues(alpha: 0.7),
+                          color:    DS.textMuted.withValues(alpha: 0.7),
                           fontSize: 14,
                         ),
-                        prefixIcon: const Icon(Icons.search_rounded, color: DS.purple, size: 22),
-                        border:        InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
+                        prefixIcon:     const Icon(Icons.search_rounded, color: DS.purple, size: 22),
+                        border:         InputBorder.none,
+                        enabledBorder:  InputBorder.none,
+                        focusedBorder:  InputBorder.none,
+                        filled:         false,
                         contentPadding: const EdgeInsets.symmetric(vertical: 8),
                         suffixIcon: _query.isNotEmpty
                             ? IconButton(
@@ -282,18 +295,18 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
               ),
 
               Container(
-                height: 48,
+                height:  48,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(children: [
                   Expanded(child: GestureDetector(
                     onTap: _showFilterModal,
                     child: Container(
-                      height: 38,
+                      height:  38,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: DS.bgCard,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: DS.border),
+                        color:         DS.bgCard,
+                        borderRadius:  BorderRadius.circular(12),
+                        border:        Border.all(color: DS.border),
                       ),
                       child: Row(children: [
                         const Icon(Icons.tune_rounded, size: 16, color: DS.purple),
@@ -301,20 +314,20 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
                         Text('تصفية الفئات',
                             style: DS.body.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: DS.purple,
+                              color:      DS.purple,
                             )),
                         const Spacer(),
                         if (_category != 'الكل')
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: DS.purple,
-                              borderRadius: BorderRadius.circular(20),
+                              color:         DS.purple,
+                              borderRadius:  BorderRadius.circular(20),
                             ),
                             child: Text(_category,
                                 style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
+                                  color:      Colors.white,
+                                  fontSize:   10,
                                   fontWeight: FontWeight.w700,
                                 )),
                           ),
@@ -357,8 +370,8 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
           final list = _filter(snap.data ?? []);
           if (list.isEmpty) {
             return DSEmpty(
-              icon: Icons.gavel_rounded,
-              title: 'لا توجد مزادات',
+              icon:     Icons.gavel_rounded,
+              title:    'لا توجد مزادات',
               subtitle: 'جرّب فئة أو بحثاً مختلفاً',
               onRefresh: () => setState(() {
                 _query    = '';
@@ -367,10 +380,10 @@ class _AuctionsHomeState extends State<_AuctionsHome> with TickerProviderStateMi
             );
           }
           return StaggeredListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-            itemCount: list.length,
+            padding:     const EdgeInsets.fromLTRB(20, 16, 20, 100),
+            itemCount:   list.length,
             baseDelayMs: 80,
-            staggerMs: 70,
+            staggerMs:   70,
             itemBuilder: (_, i) => BidderAuctionCard(auction: list[i]),
           );
         },

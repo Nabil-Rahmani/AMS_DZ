@@ -26,7 +26,6 @@ class _AdminDashboardState extends State<AdminDashboard>
   int _selectedIndex = 0;
   late AnimationController _animCtrl;
 
-  // ✅ أضفنا الإشعارات كـ index 1 — وزحزحنا الباقي
   final List<({IconData icon, String label, Color color})> _nav = [
     (icon: Icons.dashboard_rounded,       label: 'الرئيسية',   color: DS.purple),
     (icon: Icons.notifications_rounded,   label: 'الإشعارات',  color: DS.warning),
@@ -50,7 +49,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   Widget _buildPage() {
     switch (_selectedIndex) {
       case 0: return AdminDashboardHome(db: _db, onActionTap: (i) => setState(() => _selectedIndex = i));
-      case 1: return const NotificationsScreen(); // ✅
+      case 1: return const NotificationsScreen();
       case 2: return const ManageUsersScreen();
       case 3: return const ManageAuctionsScreen();
       case 4: return const VerifyKycScreen();
@@ -110,14 +109,14 @@ class _AdminDashboardState extends State<AdminDashboard>
       ),
     );
     if (ok != true) return;
-    await FirebaseMessagingService.onLogout(); // ✅ حذف FCM token
+    await FirebaseMessagingService.onLogout();
     await FirebaseAuth.instance.signOut();
     if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final uid  = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final uid    = FirebaseAuth.instance.currentUser?.uid ?? '';
     final isWide = MediaQuery.of(context).size.width >= 800;
 
     return Directionality(
@@ -144,37 +143,52 @@ class _AdminDashboardState extends State<AdminDashboard>
         body: isWide
             ? Row(children: [_buildSidebar(uid), Expanded(child: _buildPage())])
             : _buildPage(),
-        bottomNavigationBar: isWide ? null : GlassCard(
-          borderRadius: 0,
-          padding: EdgeInsets.zero,
-          backgroundColor: DS.bgCard.withValues(alpha: 0.8),
-          border: const Border(top: BorderSide(color: DS.border)),
-          child: NavigationBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-            destinations: _nav.asMap().entries.map((e) {
-              // ✅ Badge على الإشعارات فقط
-              if (e.key == 1) {
+        bottomNavigationBar: isWide ? null : Container(
+          decoration: BoxDecoration(
+            color: DS.bgCard,
+            border: Border(top: BorderSide(color: DS.border.withValues(alpha: 0.5))),
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              navigationBarTheme: NavigationBarThemeData(
+                backgroundColor:  DS.bgCard,
+                surfaceTintColor: Colors.transparent,
+                shadowColor:      Colors.transparent,
+                elevation:        0,
+              ),
+            ),
+            child: NavigationBar(
+              backgroundColor:  DS.bgCard,
+              surfaceTintColor: Colors.transparent,
+              shadowColor:      Colors.transparent,
+              elevation:        0,
+              selectedIndex:    _selectedIndex,
+              onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+              indicatorColor: DS.purple.withValues(alpha: 0.1),
+              destinations: _nav.asMap().entries.map((e) {
+                if (e.key == 1) {
+                  return NavigationDestination(
+                    icon: StreamBuilder<int>(
+                      stream: NotificationService.streamUnreadCount(uid),
+                      builder: (_, snap) {
+                        final count = snap.data ?? 0;
+                        return Badge(
+                          isLabelVisible:  count > 0,
+                          label:           Text('$count'),
+                          backgroundColor: DS.error,
+                          child:           Icon(e.value.icon),
+                        );
+                      },
+                    ),
+                    label: e.value.label,
+                  );
+                }
                 return NavigationDestination(
-                  icon: StreamBuilder<int>(
-                    stream: NotificationService.streamUnreadCount(uid),
-                    builder: (_, snap) {
-                      final count = snap.data ?? 0;
-                      return Badge(
-                        isLabelVisible: count > 0,
-                        label: Text('$count'),
-                        backgroundColor: DS.error,
-                        child: Icon(e.value.icon),
-                      );
-                    },
-                  ),
+                  icon:  Icon(e.value.icon),
                   label: e.value.label,
                 );
-              }
-              return NavigationDestination(icon: Icon(e.value.icon), label: e.value.label);
-            }).toList(),
+              }).toList(),
+            ),
           ),
         ),
       ),
@@ -223,27 +237,27 @@ class _AdminDashboardState extends State<AdminDashboard>
                     border: Border.all(color: sel ? Colors.transparent : DS.border.withValues(alpha: 0.3)),
                   ),
                   child: Row(children: [
-                    // ✅ Badge في الـ Sidebar أيضاً
                     e.key == 1
                         ? StreamBuilder<int>(
                       stream: NotificationService.streamUnreadCount(uid),
                       builder: (_, snap) {
                         final count = snap.data ?? 0;
                         return Badge(
-                          isLabelVisible: count > 0,
-                          label: Text('$count'),
+                          isLabelVisible:  count > 0,
+                          label:           Text('$count'),
                           backgroundColor: DS.error,
                           child: Icon(e.value.icon, size: 22,
                               color: sel ? Colors.white : DS.textSecondary),
                         );
                       },
                     )
-                        : Icon(e.value.icon, size: 22, color: sel ? Colors.white : DS.textSecondary),
+                        : Icon(e.value.icon, size: 22,
+                        color: sel ? Colors.white : DS.textSecondary),
                     const SizedBox(width: 14),
                     Text(e.value.label, style: TextStyle(
-                      fontSize: 15,
+                      fontSize:   15,
                       fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                      color: sel ? Colors.white : DS.textPrimary,
+                      color:      sel ? Colors.white : DS.textPrimary,
                     )),
                     const Spacer(),
                     if (sel) const Icon(Icons.chevron_left_rounded, color: Colors.white, size: 18),
