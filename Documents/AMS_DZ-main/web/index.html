@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="auction_app2">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>AMS-DZ Auctions</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+<!-- ✅ معالجة رابط التحقق من الإيميل -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+  import { getAuth, applyActionCode } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyATn1hSKwv3DJOVqaQh0XUXlIsswa1eYWs",
+    authDomain:        "auctionapp-87bee.firebaseapp.com",
+    projectId:         "auctionapp-87bee",
+    storageBucket:     "auctionapp-87bee.firebasestorage.app",
+    messagingSenderId: "972912647909",
+    appId:             "1:972912647909:android:9048d35f5d4b5574623e0c"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const mode      = urlParams.get('mode');
+  const oobCode   = urlParams.get('oobCode');
+
+  if (mode === 'verifyEmail' && oobCode) {
+    applyActionCode(auth, oobCode)
+      .then(() => {
+        document.body.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                      height:100vh;font-family:Arial;background:#0f0f1a;color:white;
+                      text-align:center;padding:20px;">
+            <div style="font-size:80px;margin-bottom:20px;">✅</div>
+            <h2 style="color:#4CAF50;margin-bottom:10px;">تم التحقق بنجاح!</h2>
+            <p style="color:#aaa;margin-bottom:30px;">
+              يمكنك الآن العودة للتطبيق والضغط على زر "لقد تحققت"
+            </p>
+            <div style="background:#1a1a2e;padding:15px 25px;border-radius:12px;color:#7c3aed;">
+              AMS-DZ Auctions
+            </div>
+          </div>
+        `;
+      })
+      .catch(() => {
+        document.body.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                      height:100vh;font-family:Arial;background:#0f0f1a;color:white;
+                      text-align:center;padding:20px;">
+            <div style="font-size:80px;margin-bottom:20px;">❌</div>
+            <h2 style="color:#f44336;margin-bottom:10px;">فشل التحقق</h2>
+            <p style="color:#aaa;">
+              الرابط منتهي الصلاحية، أعد إرسال رابط التحقق من التطبيق
+            </p>
+          </div>
+        `;
+      });
+  } else {
+    // ✅ صفحة عادية — شغل Flutter
+    const script   = document.createElement('script');
+    script.src     = 'flutter_bootstrap.js';
+    script.async   = true;
+    document.body.appendChild(script);
+  }
+</script>
+</body>
+</html>
