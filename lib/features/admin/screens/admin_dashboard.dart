@@ -145,26 +145,39 @@ class _AdminDashboardState extends State<AdminDashboard>
             : _buildPage(),
         bottomNavigationBar: isWide ? null : Container(
           decoration: BoxDecoration(
-            color: DS.bgCard,
-            border: Border(top: BorderSide(color: DS.border.withValues(alpha: 0.5))),
+            color: DS.purple,
+            border: Border(top: BorderSide(color: DS.purple)),
           ),
           child: Theme(
             data: Theme.of(context).copyWith(
               navigationBarTheme: NavigationBarThemeData(
-                backgroundColor:  DS.bgCard,
+                backgroundColor:  DS.purple,
                 surfaceTintColor: Colors.transparent,
                 shadowColor:      Colors.transparent,
+                indicatorColor:   Colors.white.withValues(alpha: 0.2),
                 elevation:        0,
+                labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700);
+                  }
+                  return TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11);
+                }),
+                iconTheme: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const IconThemeData(color: Colors.white);
+                  }
+                  return IconThemeData(color: Colors.white.withValues(alpha: 0.6));
+                }),
               ),
             ),
             child: NavigationBar(
-              backgroundColor:  DS.bgCard,
+              backgroundColor:  DS.purple,
               surfaceTintColor: Colors.transparent,
               shadowColor:      Colors.transparent,
               elevation:        0,
               selectedIndex:    _selectedIndex,
               onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-              indicatorColor: DS.purple.withValues(alpha: 0.1),
+              indicatorColor: Colors.white.withValues(alpha: 0.2),
               destinations: _nav.asMap().entries.map((e) {
                 if (e.key == 1) {
                   return NavigationDestination(
@@ -176,7 +189,19 @@ class _AdminDashboardState extends State<AdminDashboard>
                           isLabelVisible:  count > 0,
                           label:           Text('$count'),
                           backgroundColor: DS.error,
-                          child:           Icon(e.value.icon),
+                          child: Icon(e.value.icon, color: Colors.white60),
+                        );
+                      },
+                    ),
+                    selectedIcon: StreamBuilder<int>(
+                      stream: NotificationService.streamUnreadCount(uid),
+                      builder: (_, snap) {
+                        final count = snap.data ?? 0;
+                        return Badge(
+                          isLabelVisible:  count > 0,
+                          label:           Text('$count'),
+                          backgroundColor: DS.error,
+                          child: Icon(e.value.icon, color: Colors.white),
                         );
                       },
                     ),
@@ -184,8 +209,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                   );
                 }
                 return NavigationDestination(
-                  icon:  Icon(e.value.icon),
-                  label: e.value.label,
+                  icon:         Icon(e.value.icon, color: Colors.white60),
+                  selectedIcon: Icon(e.value.icon, color: Colors.white),
+                  label:        e.value.label,
                 );
               }).toList(),
             ),

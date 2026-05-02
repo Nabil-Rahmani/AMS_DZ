@@ -31,6 +31,9 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
   bool _termsAccepted       = false;
   bool _loading             = false;
 
+  // ✅ تتبع أي حقل مفتوح اقتراحاته
+  String? _openSuggestionsKey;
+
   final List<File> _images  = [];
   static const int _maxImages = 60;
 
@@ -41,6 +44,7 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
   ];
 
   final Map<String, TextEditingController> _detailControllers = {};
+  final Map<String, FocusNode> _detailFocusNodes = {};
 
   static const Map<String, List<Map<String, String>>> _categoryFields = {
     'مركبات': [
@@ -144,6 +148,19 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
     ],
   };
 
+  static const Map<String, List<String>> _fieldSuggestions = {
+    'transmission':   ['يدوي', 'أوتوماتيك', 'نصف أوتوماتيك'],
+    'fuel':           ['ديزل', 'بنزين', 'غاز', 'كهرباء', 'هجين'],
+    'condition':      ['ممتازة', 'جيدة', 'تحتاج صيانة', 'جديد', 'مستعمل', 'مجدد'],
+    'facing':         ['شمال', 'جنوب', 'شرق', 'غرب', 'شمال شرق', 'شمال غرب'],
+    'energySource':   ['شمسي', 'رياح', 'ديزل', 'هجين'],
+    'vehicleType':    ['سيارة', 'شاحنة', 'دراجة نارية', 'حافلة', 'جرار', 'عربة'],
+    'type':           ['شقة', 'فيلا', 'محل تجاري', 'أرض', 'مستودع', 'مكتب'],
+    'material':       ['خشب طبيعي', 'MDF', 'معدن', 'قماش', 'جلد'],
+    'stones':         ['ألماس', 'ياقوت', 'زمرد', 'زفير', 'بدون أحجار'],
+    'technicalVisit': ['صالح', 'منتهي', 'جديد'],
+  };
+
   late AnimationController _animCtrl;
   late Animation<double> _fade;
 
@@ -159,10 +176,31 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
 
   void _initDetailControllers() {
     _detailControllers.clear();
+    _detailFocusNodes.clear();
     final fields = _categoryFields[_category] ?? [];
     for (final f in fields) {
-      _detailControllers[f['key']!] = TextEditingController();
+      final key = f['key']!;
+      _detailControllers[key] = TextEditingController();
+      _detailFocusNodes[key]  = _buildFocusNode(key);
     }
+  }
+
+  FocusNode _buildFocusNode(String key) {
+    final fn = FocusNode();
+    fn.addListener(() {
+      if (!mounted) return;
+      if (fn.hasFocus) {
+        // ✅ فتح الاقتراحات فقط إذا عنده اقتراحات
+        if (_fieldSuggestions.containsKey(key)) {
+          setState(() => _openSuggestionsKey = key);
+        }
+      } else {
+        if (_openSuggestionsKey == key) {
+          setState(() => _openSuggestionsKey = null);
+        }
+      }
+    });
+    return fn;
   }
 
   @override
@@ -172,6 +210,7 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
     _priceController.dispose();
     _locationController.dispose();
     for (final c in _detailControllers.values) { c.dispose(); }
+    for (final f in _detailFocusNodes.values)  { f.dispose(); }
     _animCtrl.dispose();
     super.dispose();
   }
@@ -184,12 +223,10 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
     final source = await _showSourceDialog();
     if (source == null) return;
     if (source == ImageSource.gallery) {
-      final picked = await _picker.pickMultiImage(
-          imageQuality: 80, maxWidth: 1200);
+      final picked = await _picker.pickMultiImage(imageQuality: 80, maxWidth: 1200);
       if (picked.isEmpty) return;
       final remaining = _maxImages - _images.length;
-      setState(() => _images
-          .addAll(picked.take(remaining).map((e) => File(e.path))));
+      setState(() => _images.addAll(picked.take(remaining).map((e) => File(e.path))));
     } else {
       final picked = await _picker.pickImage(
           source: ImageSource.camera, imageQuality: 80, maxWidth: 1200);
@@ -203,40 +240,32 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => ClipRRect(
-        borderRadius:
-        const BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             decoration: const BoxDecoration(
               color: DS.bgCard,
-              borderRadius:
-              BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               border: Border(top: BorderSide(color: DS.border)),
             ),
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Container(
-                  width: 40,
-                  height: 4,
+                  width: 40, height: 4,
                   decoration: BoxDecoration(
-                      color: DS.border,
-                      borderRadius: BorderRadius.circular(2))),
+                      color: DS.border, borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 20),
               Text('إضافة صور', style: DS.titleS),
               const SizedBox(height: 16),
               Row(children: [
                 Expanded(child: ImageSourceButton(
-                    icon: Icons.camera_alt_rounded,
-                    label: 'كاميرا',
-                    onTap: () =>
-                        Navigator.pop(context, ImageSource.camera))),
+                    icon: Icons.camera_alt_rounded, label: 'كاميرا',
+                    onTap: () => Navigator.pop(context, ImageSource.camera))),
                 const SizedBox(width: 12),
                 Expanded(child: ImageSourceButton(
-                    icon: Icons.photo_library_rounded,
-                    label: 'المعرض',
-                    onTap: () =>
-                        Navigator.pop(context, ImageSource.gallery))),
+                    icon: Icons.photo_library_rounded, label: 'المعرض',
+                    onTap: () => Navigator.pop(context, ImageSource.gallery))),
               ]),
             ]),
           ),
@@ -274,13 +303,9 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
     setState(() => _loading = true);
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       final organizerName = userDoc.data()?['name'] ?? 'Unknown';
-      final docRef =
-      FirebaseFirestore.instance.collection('auctions').doc();
+      final docRef = FirebaseFirestore.instance.collection('auctions').doc();
       final imageUrls = await _uploadImages(docRef.id);
       final details = _buildDetails();
 
@@ -307,25 +332,21 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
         if (details.isNotEmpty) 'details': details,
       });
 
-      // ✅ إشعار للأدمين + المهتمين
       try {
         final adminSnap = await FirebaseFirestore.instance
-            .collection('users')
-            .where('role', isEqualTo: 'admin')
-            .limit(1)
-            .get();
+            .collection('users').where('role', isEqualTo: 'admin').limit(1).get();
         if (adminSnap.docs.isNotEmpty) {
           await NotificationService.onAuctionSubmitted(
-            adminId:      adminSnap.docs.first.id,
+            adminId: adminSnap.docs.first.id,
             auctionTitle: _titleController.text.trim(),
-            auctionId:    docRef.id,
+            auctionId: docRef.id,
           );
         }
         await NotificationService.notifyInterestedUsers(
-          category:     _category,
+          category: _category,
           auctionTitle: _titleController.text.trim(),
-          auctionId:    docRef.id,
-          organizerId:  uid,
+          auctionId: docRef.id,
+          organizerId: uid,
         );
       } catch (_) {}
 
@@ -345,10 +366,7 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
   }
 
   void _showError(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-        content: Text(msg),
-        backgroundColor: DS.error,
-        behavior: SnackBarBehavior.floating),
+    SnackBar(content: Text(msg), backgroundColor: DS.error, behavior: SnackBarBehavior.floating),
   );
 
   @override
@@ -438,38 +456,132 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
     );
   }
 
+  // ✅ اقتراحات تظهر عند الضغط مثل dropdown بأنيميشن
   Widget _buildDetailsSection() {
     final fields = _categoryFields[_category] ?? [];
     return Column(
       children: fields.map((f) {
-        final ctrl = _detailControllers[f['key']!]!;
+        final key         = f['key']!;
+        final ctrl        = _detailControllers[key]!;
+        final fn          = _detailFocusNodes[key]!;
+        final suggestions = _fieldSuggestions[key];
+        final isOpen      = _openSuggestionsKey == key;
+        final hasSugg     = suggestions != null;
+
         return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: TextFormField(
-            controller: ctrl,
-            style: const TextStyle(color: DS.textPrimary, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: f['hint'],
-              labelText: '${f['emoji']} ${f['label']}',
-              labelStyle:
-              const TextStyle(color: DS.textMuted, fontSize: 13),
-              hintStyle:
-              const TextStyle(color: DS.textHint, fontSize: 13),
-              filled: true,
-              fillColor: DS.bgField,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 14),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: DS.border)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: DS.border)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide:
-                  const BorderSide(color: DS.purple, width: 1.5)),
-            ),
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── الحقل ──
+              TextFormField(
+                controller: ctrl,
+                focusNode: fn,
+                style: const TextStyle(
+                  color: DS.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  hintText: f['hint'],
+                  labelText: '${f['emoji']} ${f['label']}',
+                  labelStyle: const TextStyle(color: DS.textMuted, fontSize: 13),
+                  hintStyle: const TextStyle(color: DS.textHint, fontSize: 13),
+                  filled: true,
+                  fillColor: isOpen
+                      ? DS.purple.withValues(alpha: 0.05)
+                      : DS.bgField,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: DS.border)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: DS.border)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: DS.purple, width: 1.5)),
+                  // ✅ سهم V يدل على وجود اقتراحات
+                  suffixIcon: hasSugg
+                      ? AnimatedRotation(
+                    turns: isOpen ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 250),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: isOpen ? DS.purple : DS.textMuted,
+                      size: 24,
+                    ),
+                  )
+                      : null,
+                ),
+              ),
+
+              // ✅ الاقتراحات تظهر/تختفي بأنيميشن
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 250),
+                crossFadeState: isOpen && hasSugg
+                    ? CrossFadeState.showFirst
+                    : CrossFadeState.showSecond,
+                firstChild: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: DS.bgCard,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: DS.purple.withValues(alpha: 0.25)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: DS.purple.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: (suggestions ?? []).map((s) {
+                      final isSelected = ctrl.text == s;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            ctrl.text = s;
+                            _openSuggestionsKey = null;
+                          });
+                          fn.unfocus();
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? DS.purple
+                                : DS.purple.withValues(alpha: 0.07),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected
+                                  ? DS.purple
+                                  : DS.purple.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Text(
+                            s,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : DS.purple,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                secondChild: const SizedBox.shrink(),
+              ),
+            ],
           ),
         );
       }).toList(),
@@ -496,16 +608,13 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
       Row(children: [
         Text('${_images.length}/$_maxImages صورة',
             style: const TextStyle(
-                color: DS.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600)),
+                color: DS.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         const Spacer(),
         if (_images.isNotEmpty)
           TextButton.icon(
             icon: const Icon(Icons.delete_sweep_rounded, size: 16),
             label: const Text('حذف الكل',
-                style: TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
             onPressed: () => setState(() => _images.clear()),
             style: TextButton.styleFrom(foregroundColor: DS.error),
           ),
@@ -515,19 +624,14 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10),
           itemCount: _images.length,
           itemBuilder: (_, i) => Stack(children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Image.file(_images[i],
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity),
+                  fit: BoxFit.cover, width: double.infinity, height: double.infinity),
             ),
             Positioned(
               top: 6, left: 6,
@@ -535,10 +639,8 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
                 onTap: () => setState(() => _images.removeAt(i)),
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                      color: DS.error, shape: BoxShape.circle),
-                  child: const Icon(Icons.close_rounded,
-                      color: Colors.white, size: 14),
+                  decoration: const BoxDecoration(color: DS.error, shape: BoxShape.circle),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 14),
                 ),
               ),
             ),
@@ -546,15 +648,12 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
               Positioned(
                 bottom: 8, right: 8,
                 child: GlassCard(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   borderRadius: 8,
                   backgroundColor: DS.gold.withValues(alpha: 0.8),
                   child: const Text('رئيسية',
                       style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800)),
+                          color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
                 ),
               ),
           ]),
@@ -566,33 +665,23 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
           onTap: _pickImages,
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            height: 100,
-            width: double.infinity,
+            height: 100, width: double.infinity,
             decoration: BoxDecoration(
               color: DS.purpleDeep.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                        color: DS.purple.withValues(alpha: 0.1),
-                        shape: BoxShape.circle),
-                    child: const Icon(
-                        Icons.add_photo_alternate_rounded,
-                        size: 24,
-                        color: DS.purple),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                      'إضافة صور (${_maxImages - _images.length} متبقية)',
-                      style: const TextStyle(
-                          color: DS.purple,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700)),
-                ]),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: DS.purple.withValues(alpha: 0.1), shape: BoxShape.circle),
+                child: const Icon(Icons.add_photo_alternate_rounded, size: 24, color: DS.purple),
+              ),
+              const SizedBox(height: 8),
+              Text('إضافة صور (${_maxImages - _images.length} متبقية)',
+                  style: const TextStyle(
+                      color: DS.purple, fontSize: 13, fontWeight: FontWeight.w700)),
+            ]),
           ),
         ),
     ]);
@@ -604,8 +693,7 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
         controller: _titleController,
         hint: 'عنوان المزاد',
         icon: Icons.title_rounded,
-        validator: (v) =>
-        v == null || v.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
+        validator: (v) => v == null || v.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
       ),
       const SizedBox(height: 16),
       DarkTextField(
@@ -613,26 +701,22 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
         hint: 'الوصف التفصيلي للمنتج...',
         icon: Icons.description_rounded,
         keyboardType: TextInputType.multiline,
-        validator: (v) =>
-        v == null || v.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
+        validator: (v) => v == null || v.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
       ),
       const SizedBox(height: 16),
       DarkTextField(
         controller: _priceController,
         hint: 'السعر الابتدائي (DZD)',
         icon: Icons.payments_rounded,
-        keyboardType:
-        const TextInputType.numberWithOptions(decimal: true),
-        validator: (v) =>
-        v == null || v.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        validator: (v) => v == null || v.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
       ),
       const SizedBox(height: 16),
       DarkTextField(
         controller: _locationController,
         hint: 'الموقع / المدينة',
         icon: Icons.location_on_rounded,
-        validator: (v) =>
-        v == null || v.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
+        validator: (v) => v == null || v.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
       ),
       const SizedBox(height: 20),
       Align(
@@ -649,40 +733,38 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
             onTap: () {
               setState(() {
                 _category = c;
-                for (final ctrl in _detailControllers.values) {
-                  ctrl.dispose();
-                }
+                _openSuggestionsKey = null;
+                for (final ctrl in _detailControllers.values) { ctrl.dispose(); }
+                for (final fn   in _detailFocusNodes.values)  { fn.dispose(); }
                 _detailControllers.clear();
+                _detailFocusNodes.clear();
                 final fields = _categoryFields[c] ?? [];
                 for (final f in fields) {
-                  _detailControllers[f['key']!] = TextEditingController();
+                  final key = f['key']!;
+                  _detailControllers[key] = TextEditingController();
+                  _detailFocusNodes[key]  = _buildFocusNode(key);
                 }
               });
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 gradient: sel ? DS.purpleGradient : null,
                 color: sel ? null : DS.bgElevated,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: sel ? Colors.transparent : DS.border),
+                border: Border.all(color: sel ? Colors.transparent : DS.border),
                 boxShadow: sel ? DS.purpleShadow : [],
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(_getCategoryIcon(c),
-                    size: 14,
+                Icon(_getCategoryIcon(c), size: 14,
                     color: sel ? Colors.white : DS.textSecondary),
                 const SizedBox(width: 6),
-                Text(c,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight:
-                      sel ? FontWeight.w800 : FontWeight.w600,
-                      color: sel ? Colors.white : DS.textSecondary,
-                    )),
+                Text(c, style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: sel ? FontWeight.w800 : FontWeight.w600,
+                  color: sel ? Colors.white : DS.textSecondary,
+                )),
               ]),
             ),
           );
@@ -698,16 +780,13 @@ class _SubmitAuctionScreenState extends State<SubmitAuctionScreen>
         decoration: BoxDecoration(
           color: DS.warning.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
-          border:
-          Border.all(color: DS.warning.withValues(alpha: 0.2)),
+          border: Border.all(color: DS.warning.withValues(alpha: 0.2)),
         ),
         child: const Text(
           'أؤكد أن هذا المنتج خاضع للملكية التامة وغير مرهون، وأتحمل كامل المسؤولية القانونية عن البيانات المذكورة وتفاصيل المزاد.',
           style: TextStyle(
-              height: 1.6,
-              fontSize: 13,
-              color: DS.textPrimary,
-              fontWeight: FontWeight.w500),
+              height: 1.6, fontSize: 13,
+              color: DS.textPrimary, fontWeight: FontWeight.w500),
         ),
       ),
       const SizedBox(height: 16),

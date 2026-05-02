@@ -11,29 +11,33 @@ class DetailCountdownTimer extends StatefulWidget {
 }
 
 class _DetailCountdownTimerState extends State<DetailCountdownTimer> {
-  late Duration _rem;
-  late Timer _timer;
+  Duration _rem = Duration.zero; // ✅ بدل late
+  Timer? _timer;                 // ✅ nullable بدل late
 
   @override
   void initState() {
     super.initState();
     _update();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(_update);
-    });
+    // ✅ لا نبدأ timer إذا انتهى الوقت
+    if (_rem > Duration.zero) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(_update);
+      });
+    }
   }
 
   void _update() {
-    _rem = widget.endTime.difference(DateTime.now());
-    if (_rem.isNegative) {
-      _rem = Duration.zero;
-      _timer.cancel();
+    final diff = widget.endTime.difference(DateTime.now());
+    _rem = diff.isNegative ? Duration.zero : diff;
+    if (_rem == Duration.zero) {
+      _timer?.cancel();
+      _timer = null;
     }
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel(); // ✅ آمن
     super.dispose();
   }
 

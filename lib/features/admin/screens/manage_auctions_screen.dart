@@ -40,9 +40,6 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
     super.dispose();
   }
 
-  // ── Actions ───────────────────────────────────────────────────────
-
-  // ✅ يمرر auction كاملاً — approveAuction يستخرج منه organizerId و title
   Future<void> _approve(AuctionModel auction) async {
     final confirm = await _showConfirm(
       title:        'تأكيد الموافقة',
@@ -52,14 +49,13 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
     );
     if (!confirm) return;
     try {
-      await _db.approveAuction(auction); // ✅ auction كاملاً
+      await _db.approveAuction(auction);
       _showSnack('تمت الموافقة على المزاد ✅');
     } catch (e) {
       _showSnack('خطأ: $e', isError: true);
     }
   }
 
-  // ✅ يمرر auction.title لـ setAuctionSchedule لجدولة التذكيرات
   Future<void> _setSchedule(AuctionModel auction) async {
     DateTime? inspectionDay, startTime, endTime;
     await showDialog(
@@ -78,7 +74,7 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
       await _db.setAuctionSchedule(
         auctionId:     auction.id,
         organizerId:   auction.organizerId,
-        auctionTitle:  auction.title, // ✅ مضاف
+        auctionTitle:  auction.title,
         inspectionDay: inspectionDay!,
         startTime:     startTime!,
         endTime:       endTime!,
@@ -89,7 +85,6 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
     }
   }
 
-  // ✅ يمرر auction.title لـ adjustAuctionPrice
   Future<void> _adjustPrice(AuctionModel auction) async {
     final priceCtrl = TextEditingController(
       text: (auction.adminAdjustedPrice ?? auction.startingPrice).toStringAsFixed(2),
@@ -146,20 +141,15 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
                 ),
                 const SizedBox(height: 20),
                 Row(children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('إلغاء'),
-                    ),
-                  ),
+                  Expanded(child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('إلغاء'),
+                  )),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: GradientButton(
-                      label:     'تأكيد',
-                      height:    48,
-                      onPressed: () => Navigator.pop(context, true),
-                    ),
-                  ),
+                  Expanded(child: GradientButton(
+                    label: 'تأكيد', height: 48,
+                    onPressed: () => Navigator.pop(context, true),
+                  )),
                 ]),
               ]),
             ),
@@ -169,22 +159,15 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
     );
 
     if (confirm != true) return;
-
     final newPrice = double.tryParse(priceCtrl.text.trim());
-    if (newPrice == null) {
-      _showSnack('سعر غير صحيح', isError: true);
-      return;
-    }
-
+    if (newPrice == null) { _showSnack('سعر غير صحيح', isError: true); return; }
     try {
       await _db.adjustAuctionPrice(
         auctionId:    auction.id,
         organizerId:  auction.organizerId,
-        auctionTitle: auction.title, // ✅ مضاف
+        auctionTitle: auction.title,
         newPrice:     newPrice,
-        adminNote:    noteCtrl.text.trim().isEmpty
-            ? 'تعديل من المسؤول'
-            : noteCtrl.text.trim(),
+        adminNote:    noteCtrl.text.trim().isEmpty ? 'تعديل من المسؤول' : noteCtrl.text.trim(),
       );
       _showSnack('تم تعديل السعر وإشعار البائع ✅');
     } catch (e) {
@@ -192,7 +175,6 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
     }
   }
 
-  // ✅ يمرر auction كاملاً — activateAuction يرسل إشعارات للمشاركين
   Future<void> _activate(AuctionModel auction) async {
     if (auction.startTime == null || auction.inspectionDay == null) {
       _showSnack('حدد يوم المعاينة وتاريخ المزاد أولاً', isError: true);
@@ -206,17 +188,15 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
     );
     if (!confirm) return;
     try {
-      await _db.activateAuction(auction); // ✅ auction كاملاً
+      await _db.activateAuction(auction);
       _showSnack('تم تفعيل المزاد ✅');
     } catch (e) {
       _showSnack('خطأ: $e', isError: true);
     }
   }
 
-  // ✅ يمرر auction كاملاً — rejectAuction يستخرج organizerId و title تلقائياً
   Future<void> _reject(AuctionModel auction) async {
     final reasonCtrl = TextEditingController();
-
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => Dialog(
@@ -236,8 +216,7 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color:  DS.errorSurface,
-                    shape:  BoxShape.circle,
+                    color: DS.errorSurface, shape: BoxShape.circle,
                     border: Border.all(color: DS.error.withValues(alpha: 0.3)),
                   ),
                   child: const Icon(Icons.cancel_rounded, color: DS.error, size: 28),
@@ -253,20 +232,16 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
                 ),
                 const SizedBox(height: 20),
                 Row(children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('إلغاء'),
-                    ),
-                  ),
+                  Expanded(child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('إلغاء'),
+                  )),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style:     ElevatedButton.styleFrom(backgroundColor: DS.error),
-                      onPressed: () => Navigator.pop(context, true),
-                      child:     const Text('رفض', style: TextStyle(color: Colors.white)),
-                    ),
-                  ),
+                  Expanded(child: ElevatedButton(
+                    style:     ElevatedButton.styleFrom(backgroundColor: DS.error),
+                    onPressed: () => Navigator.pop(context, true),
+                    child:     const Text('رفض', style: TextStyle(color: Colors.white)),
+                  )),
                 ]),
               ]),
             ),
@@ -274,24 +249,18 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
         ),
       ),
     );
-
     if (confirm != true) return;
-
     try {
-      await _db.rejectAuction(auction, reason: reasonCtrl.text.trim()); // ✅ auction كاملاً
+      await _db.rejectAuction(auction, reason: reasonCtrl.text.trim());
       _showSnack('تم رفض المزاد');
     } catch (e) {
       _showSnack('خطأ: $e', isError: true);
     }
   }
 
-  // ✅ يمرر auction كاملاً — declareWinner يستخرج sellerId و finalPrice تلقائياً
   Future<void> _declareWinner(AuctionModel auction) async {
     final topBid = await _db.getTopBid(auction.id);
-    if (topBid == null) {
-      _showSnack('لا توجد مزايدات');
-      return;
-    }
+    if (topBid == null) { _showSnack('لا توجد مزايدات'); return; }
     final winnerId = topBid['bidderId'] as String;
     final confirm  = await _showConfirm(
       title:        'تحديد الفائز',
@@ -301,8 +270,49 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
     );
     if (!confirm) return;
     try {
-      await _db.declareWinner(auction: auction, winnerId: winnerId); // ✅ auction كاملاً
+      await _db.declareWinner(auction: auction, winnerId: winnerId);
       _showSnack('تم تحديد الفائز ✅');
+    } catch (e) {
+      _showSnack('خطأ: $e', isError: true);
+    }
+  }
+
+  // ✅ إرجاع الضمانات مع Dialog اختيار الطريقة
+  Future<void> _refundDeposits(AuctionModel auction) async {
+    if (auction.winnerId == null) {
+      _showSnack('حدد الفائز أولاً قبل إرجاع الضمانات', isError: true);
+      return;
+    }
+
+    final depositPaidBy = auction.depositPaidBy ?? [];
+    final losers = depositPaidBy.where((uid) => uid != auction.winnerId).toList();
+
+    if (losers.isEmpty) {
+      _showSnack('لا يوجد مزايدون لإرجاع ضماناتهم');
+      return;
+    }
+
+    // ✅ Dialog اختيار طريقة الإرجاع
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => _RefundMethodDialog(
+        depositAmount: auction.deposit,
+        losersCount:   losers.length,
+      ),
+    );
+
+    if (result == null) return;
+
+    try {
+      await _db.refundDeposits(
+        auctionId:          auction.id,
+        winnerId:           auction.winnerId!,
+        depositAmount:      auction.deposit,
+        refundMethod:       result['method'],
+        bankAccountNumber:  result['bankAccountNumber'],
+        bankName:           result['bankName'],
+      );
+      _showSnack('تم إرجاع الضمانات بنجاح ✅');
     } catch (e) {
       _showSnack('خطأ: $e', isError: true);
     }
@@ -323,8 +333,6 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
       _showSnack('خطأ: $e', isError: true);
     }
   }
-
-  // ── Helpers ───────────────────────────────────────────────────────
 
   Future<bool> _showConfirm({
     required String title,
@@ -353,20 +361,16 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
                 Text(content, style: DS.body, textAlign: TextAlign.center),
                 const SizedBox(height: 20),
                 Row(children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('إلغاء'),
-                    ),
-                  ),
+                  Expanded(child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('إلغاء'),
+                  )),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style:     ElevatedButton.styleFrom(backgroundColor: confirmColor),
-                      onPressed: () => Navigator.pop(context, true),
-                      child:     Text(confirmText, style: const TextStyle(color: Colors.white)),
-                    ),
-                  ),
+                  Expanded(child: ElevatedButton(
+                    style:     ElevatedButton.styleFrom(backgroundColor: confirmColor),
+                    onPressed: () => Navigator.pop(context, true),
+                    child:     Text(confirmText, style: const TextStyle(color: Colors.white)),
+                  )),
                 ]),
               ]),
             ),
@@ -380,14 +384,9 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
   void _showSnack(String msg, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content:         Text(msg),
-        backgroundColor: isError ? DS.error : DS.success,
-      ),
+      SnackBar(content: Text(msg), backgroundColor: isError ? DS.error : DS.success),
     );
   }
-
-  // ── Build ─────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -427,18 +426,18 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
                   ),
                   const Spacer(),
                   TabBar(
-                    controller:            _tabController,
-                    isScrollable:          true,
-                    tabAlignment:          TabAlignment.start,
-                    indicatorColor:        DS.purple,
-                    indicatorWeight:       4,
-                    indicatorSize:         TabBarIndicatorSize.label,
-                    labelColor:            DS.textPrimary,
-                    unselectedLabelColor:  DS.textMuted,
-                    labelStyle:            DS.label.copyWith(fontSize: 13, fontWeight: FontWeight.w700),
-                    unselectedLabelStyle:  DS.label.copyWith(fontSize: 13),
-                    dividerColor:          Colors.transparent,
-                    padding:               const EdgeInsets.symmetric(horizontal: 12),
+                    controller:           _tabController,
+                    isScrollable:         true,
+                    tabAlignment:         TabAlignment.start,
+                    indicatorColor:       DS.purple,
+                    indicatorWeight:      4,
+                    indicatorSize:        TabBarIndicatorSize.label,
+                    labelColor:           DS.textPrimary,
+                    unselectedLabelColor: DS.textMuted,
+                    labelStyle:           DS.label.copyWith(fontSize: 13, fontWeight: FontWeight.w700),
+                    unselectedLabelStyle: DS.label.copyWith(fontSize: 13),
+                    dividerColor:         Colors.transparent,
+                    padding:              const EdgeInsets.symmetric(horizontal: 12),
                     tabs: _tabs.map((t) => Tab(
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(t['icon'] as IconData, size: 14),
@@ -462,6 +461,7 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
                 onAdjustPrice:   _adjustPrice,
                 onActivate:      _activate,
                 onDeclareWinner: _declareWinner,
+                onRefundDeposits: _refundDeposits, // ✅ جديد
                 onDelete:        _delete,
               )).toList(),
             ),
@@ -470,4 +470,246 @@ class _ManageAuctionsScreenState extends State<ManageAuctionsScreen>
       ),
     );
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ✅ Dialog اختيار طريقة الإرجاع
+// ══════════════════════════════════════════════════════════════════════════════
+class _RefundMethodDialog extends StatefulWidget {
+  final double depositAmount;
+  final int    losersCount;
+  const _RefundMethodDialog({required this.depositAmount, required this.losersCount});
+  @override
+  State<_RefundMethodDialog> createState() => _RefundMethodDialogState();
+}
+
+class _RefundMethodDialogState extends State<_RefundMethodDialog> {
+  String _method = 'wallet'; // 'wallet' أو 'bank'
+  final _bankAccountCtrl = TextEditingController();
+  final _bankNameCtrl    = TextEditingController();
+
+  @override
+  void dispose() {
+    _bankAccountCtrl.dispose();
+    _bankNameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final netAmount = widget.depositAmount - FirestoreService.subscriptionFee;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: DS.bgModal.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: DS.border),
+              ),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+
+                // ── Header ──
+                Container(
+                  width: 56, height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: DS.purple.withValues(alpha: 0.1),
+                    border: Border.all(color: DS.purple.withValues(alpha: 0.3)),
+                  ),
+                  child: const Icon(Icons.account_balance_wallet_rounded, color: DS.purple, size: 26),
+                ),
+                const SizedBox(height: 14),
+                Text('إرجاع الضمانات', style: DS.titleM),
+                const SizedBox(height: 6),
+                Text(
+                  'عدد المزايدين: ${widget.losersCount}',
+                  style: DS.body,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+
+                // ── تفاصيل المبلغ ──
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: DS.bgElevated,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: DS.border),
+                  ),
+                  child: Column(children: [
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('مبلغ الضمان', style: DS.label),
+                      Text('${widget.depositAmount.toStringAsFixed(0)} DZD',
+                          style: DS.titleS),
+                    ]),
+                    const SizedBox(height: 6),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('رسوم الاشتراك', style: DS.label),
+                      Text('- ${FirestoreService.subscriptionFee.toStringAsFixed(0)} DZD',
+                          style: DS.titleS.copyWith(color: DS.error)),
+                    ]),
+                    Divider(color: DS.border, height: 16),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('صافي الإرجاع', style: DS.label),
+                      Text('${netAmount.toStringAsFixed(0)} DZD',
+                          style: DS.titleS.copyWith(color: DS.success)),
+                    ]),
+                  ]),
+                ),
+                const SizedBox(height: 20),
+
+                // ── اختيار الطريقة ──
+                Text('طريقة الإرجاع', style: DS.label),
+                const SizedBox(height: 10),
+                Row(children: [
+                  Expanded(child: _MethodOption(
+                    icon:     Icons.account_balance_wallet_rounded,
+                    label:    'المحفظة',
+                    subtitle: 'فوري',
+                    selected: _method == 'wallet',
+                    color:    DS.purple,
+                    onTap:    () => setState(() => _method = 'wallet'),
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(child: _MethodOption(
+                    icon:     Icons.account_balance_rounded,
+                    label:    'حساب بنكي',
+                    subtitle: '3-5 أيام',
+                    selected: _method == 'bank',
+                    color:    DS.gold,
+                    onTap:    () => setState(() => _method = 'bank'),
+                  )),
+                ]),
+
+                // ── بيانات البنك ──
+                if (_method == 'bank') ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _bankNameCtrl,
+                    style: TextStyle(color: DS.textPrimary),
+                    decoration: InputDecoration(
+                      labelText:   'اسم البنك',
+                      prefixIcon:  Icon(Icons.account_balance_rounded, color: DS.gold),
+                      filled:      true,
+                      fillColor:   DS.bgField,
+                      border:      OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: DS.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: DS.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: DS.gold, width: 1.5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _bankAccountCtrl,
+                    textDirection: TextDirection.ltr,
+                    style: TextStyle(color: DS.textPrimary),
+                    decoration: InputDecoration(
+                      labelText:   'رقم الحساب',
+                      prefixIcon:  Icon(Icons.credit_card_rounded, color: DS.gold),
+                      filled:      true,
+                      fillColor:   DS.bgField,
+                      border:      OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: DS.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: DS.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: DS.gold, width: 1.5),
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+                Row(children: [
+                  Expanded(child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('إلغاء'),
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(child: GradientButton(
+                    label:    'تأكيد الإرجاع',
+                    height:   48,
+                    isGold:   _method == 'bank',
+                    onPressed: () {
+                      if (_method == 'bank' && _bankAccountCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('أدخل رقم الحساب البنكي')),
+                        );
+                        return;
+                      }
+                      Navigator.pop(context, {
+                        'method':            _method,
+                        'bankAccountNumber': _bankAccountCtrl.text.trim(),
+                        'bankName':          _bankNameCtrl.text.trim(),
+                      });
+                    },
+                  )),
+                ]),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MethodOption extends StatelessWidget {
+  final IconData icon;
+  final String   label;
+  final String   subtitle;
+  final bool     selected;
+  final Color    color;
+  final VoidCallback onTap;
+
+  const _MethodOption({
+    required this.icon, required this.label, required this.subtitle,
+    required this.selected, required this.color, required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      decoration: BoxDecoration(
+        color:        selected ? color.withValues(alpha: 0.08) : DS.bgElevated,
+        borderRadius: BorderRadius.circular(14),
+        border:       Border.all(
+          color: selected ? color : DS.border,
+          width: selected ? 2 : 1,
+        ),
+      ),
+      child: Column(children: [
+        Icon(icon, color: selected ? color : DS.textMuted, size: 24),
+        const SizedBox(height: 6),
+        Text(label,    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+            color: selected ? color : DS.textPrimary)),
+        Text(subtitle, style: TextStyle(fontSize: 10, color: DS.textMuted)),
+      ]),
+    ),
+  );
 }

@@ -1,4 +1,3 @@
-/// AMS-DZ Dark Design System — Reusable Widget Library
 library;
 
 import 'dart:ui';
@@ -7,7 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../constants/ds_colors.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
-// LOGO WIDGET
+// LOGO WIDGET ✅ الخيار الثاني — دائرة ذهبية + زمردي
 // ══════════════════════════════════════════════════════════════════════════════
 class AmsLogo extends StatelessWidget {
   final double size;
@@ -19,28 +18,107 @@ class AmsLogo extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: size, height: size,
-          decoration: BoxDecoration(
-            gradient: DS.goldGradient,
-            borderRadius: BorderRadius.circular(size * 0.28),
-            boxShadow: DS.goldShadow,
-          ),
-          child: Center(
-            child: Icon(Icons.gavel_rounded, color: DS.bg, size: size * 0.52),
+        SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // ── الحلقة الذهبية الخارجية ──
+              Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: DS.goldLight,
+                    width: size * 0.06,
+                  ),
+                ),
+              ),
+              // ── الدائرة الزمردية الداخلية ──
+              Container(
+                width: size * 0.82,
+                height: size * 0.82,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: DS.purpleGradient,
+                  boxShadow: DS.purpleShadow,
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.gavel_rounded,
+                    color: Colors.white,
+                    size: size * 0.42,
+                  ),
+                ),
+              ),
+              // ── النقطة الذهبية ──
+              Positioned(
+                bottom: size * 0.04,
+                right: size * 0.04,
+                child: Container(
+                  width: size * 0.18,
+                  height: size * 0.18,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: DS.goldLight,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         if (showText) ...[
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('AMS-DZ', style: TextStyle(
-              fontSize: size * 0.45, fontWeight: FontWeight.w800,
-              color: DS.textPrimary, letterSpacing: 1.5, height: 1,
-            )),
-            Text('AUCTIONS', style: TextStyle(
-              fontSize: size * 0.24, fontWeight: FontWeight.w600,
-              color: DS.goldLight, letterSpacing: 2.5, height: 1.2,
-            )),
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'AMS',
+                    style: TextStyle(
+                      fontSize: size * 0.45,
+                      fontWeight: FontWeight.w800,
+                      color: DS.textPrimary,
+                      letterSpacing: 1.5,
+                      height: 1,
+                    ),
+                  ),
+                  TextSpan(
+                    text: '-DZ',
+                    style: TextStyle(
+                      fontSize: size * 0.45,
+                      fontWeight: FontWeight.w800,
+                      color: DS.goldLight,
+                      letterSpacing: 1.5,
+                      height: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 2),
+            Container(
+              width: size * 2.2,
+              height: 1.5,
+              decoration: BoxDecoration(
+                gradient: DS.goldGradient,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'AUCTIONS',
+              style: TextStyle(
+                fontSize: size * 0.22,
+                fontWeight: FontWeight.w700,
+                color: DS.gold,
+                letterSpacing: 3.5,
+                height: 1.2,
+              ),
+            ),
           ]),
         ],
       ],
@@ -111,7 +189,7 @@ class _GradientButtonState extends State<GradientButton> {
   @override
   Widget build(BuildContext context) {
     final gradient = widget.isGold ? DS.goldGradient : DS.purpleGradient;
-    final shadows = widget.isGold ? DS.goldShadow : DS.purpleShadow;
+    final shadows  = widget.isGold ? DS.goldShadow   : DS.purpleShadow;
 
     return TapAnimated(
       onTap: widget.onPressed,
@@ -197,19 +275,49 @@ class _DarkTextFieldState extends State<DarkTextField> {
         obscureText: widget.obscure ? _obscure : false,
         keyboardType: widget.keyboardType,
         textDirection: widget.textDir,
-        style: const TextStyle(color: DS.textPrimary, fontSize: 15),
+        style: const TextStyle(
+          color: DS.textPrimary,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
         validator: widget.validator,
         decoration: InputDecoration(
           hintText: widget.hint,
-          fillColor: _focused ? DS.bgElevated : DS.bgField,
+          hintStyle: const TextStyle(color: DS.textMuted, fontSize: 14),
+          filled: true,
+          fillColor: _focused ? const Color(0xFFD1FAE5) : DS.bgField,
           prefixIcon: Icon(widget.icon, size: 18,
               color: _focused ? DS.purple : DS.textMuted),
           suffixIcon: widget.obscure
               ? IconButton(
-              icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  size: 18, color: DS.textMuted),
-              onPressed: () => setState(() => _obscure = !_obscure))
+            icon: Icon(
+              _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              size: 18, color: DS.textMuted,
+            ),
+            onPressed: () => setState(() => _obscure = !_obscure),
+          )
               : widget.suffix,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: DS.border, width: 1.0),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: DS.border, width: 1.0),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: DS.purple, width: 1.5),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: DS.error, width: 1.0),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: DS.error, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
       ),
     ).animate(target: _focused ? 1 : 0).scale(
@@ -317,7 +425,8 @@ class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixi
   void initState() {
     super.initState();
     _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-    _anim = Tween(begin: 0.4, end: 1.0).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _anim = Tween(begin: 0.4, end: 1.0).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
     if (widget.animate) _ctrl.repeat(reverse: true);
   }
 
@@ -704,7 +813,7 @@ class GlassCard extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FADE-SLIDE-IN ✅ مصلح
+// FADE-SLIDE-IN
 // ══════════════════════════════════════════════════════════════════════════════
 class FadeSlideIn extends StatelessWidget {
   final Widget child;

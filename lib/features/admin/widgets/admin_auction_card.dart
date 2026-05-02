@@ -7,6 +7,7 @@ class AdminAuctionCard extends StatelessWidget {
   final AuctionModel auction;
   final VoidCallback onApprove, onReject, onSetSchedule,
       onAdjustPrice, onActivate, onDeclareWinner, onDelete;
+  final VoidCallback onRefundDeposits; // ✅ جديد
 
   const AdminAuctionCard({
     super.key,
@@ -17,6 +18,7 @@ class AdminAuctionCard extends StatelessWidget {
     required this.onAdjustPrice,
     required this.onActivate,
     required this.onDeclareWinner,
+    required this.onRefundDeposits, // ✅ جديد
     required this.onDelete,
   });
 
@@ -50,11 +52,11 @@ class AdminAuctionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.zero,
-      borderRadius: 28,
-      backgroundColor: _statusColor.withValues(alpha: 0.02),
-      border: Border.all(color: DS.border),
+      margin:           const EdgeInsets.only(bottom: 16),
+      padding:          EdgeInsets.zero,
+      borderRadius:     28,
+      backgroundColor:  _statusColor.withValues(alpha: 0.02),
+      border:           Border.all(color: DS.border),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.all(18),
@@ -81,7 +83,7 @@ class AdminAuctionCard extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               _DetailChip(
-                icon: Icons.payments_rounded,
+                icon:  Icons.payments_rounded,
                 label: '${auction.startingPrice.toStringAsFixed(0)} DZD',
                 color: DS.purple,
               ),
@@ -90,7 +92,7 @@ class AdminAuctionCard extends StatelessWidget {
                 const Icon(Icons.arrow_back_rounded, size: 14, color: DS.warning),
                 const SizedBox(width: 4),
                 _DetailChip(
-                  icon: Icons.edit_rounded,
+                  icon:  Icons.edit_rounded,
                   label: '${auction.adminAdjustedPrice!.toStringAsFixed(0)} DZD',
                   color: DS.warning,
                 ),
@@ -139,23 +141,24 @@ class AdminAuctionCard extends StatelessWidget {
     if (auction.status == AuctionStatus.submitted) {
       return Row(children: [
         Expanded(child: OutlinedButton.icon(
-          icon: const Icon(Icons.close_rounded, size: 16, color: DS.error),
+          icon:  const Icon(Icons.close_rounded, size: 16, color: DS.error),
           label: const Text('رفض', style: TextStyle(color: DS.error, fontSize: 13)),
           style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: DS.error),
+            side:    const BorderSide(color: DS.error),
             padding: const EdgeInsets.symmetric(vertical: 10),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:   RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: onReject,
         )),
         const SizedBox(width: 10),
         Expanded(child: ElevatedButton.icon(
-          icon: const Icon(Icons.check_rounded, size: 16),
-          label: const Text('موافقة', style: TextStyle(fontSize: 13)),
+          icon:  const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+          label: const Text('موافقة', style: TextStyle(fontSize: 13, color: Colors.white)),
           style: ElevatedButton.styleFrom(
             backgroundColor: DS.success,
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            foregroundColor: Colors.white,
+            padding:         const EdgeInsets.symmetric(vertical: 10),
+            shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: onApprove,
         )),
@@ -166,87 +169,102 @@ class AdminAuctionCard extends StatelessWidget {
       return Column(children: [
         Row(children: [
           Expanded(child: OutlinedButton.icon(
-            icon: const Icon(Icons.price_change_rounded, size: 15),
+            icon:  const Icon(Icons.price_change_rounded, size: 15),
             label: const Text('تعديل السعر', style: TextStyle(fontSize: 12)),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape:   RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: onAdjustPrice,
           )),
           const SizedBox(width: 8),
           Expanded(child: OutlinedButton.icon(
-            icon: const Icon(Icons.calendar_month_rounded, size: 15, color: DS.purple),
+            icon:  const Icon(Icons.calendar_month_rounded, size: 15, color: DS.purple),
             label: const Text('تحديد الموعد', style: TextStyle(fontSize: 12, color: DS.purple)),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: DS.purple),
+              side:    const BorderSide(color: DS.purple),
               padding: const EdgeInsets.symmetric(vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape:   RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: onSetSchedule,
           )),
         ]),
         const SizedBox(height: 8),
-        SizedBox(width: double.infinity,
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.play_arrow_rounded, size: 16),
-            label: const Text('تفعيل المزاد', style: TextStyle(fontSize: 13)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DS.success,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: onActivate,
-          )),
+        SizedBox(width: double.infinity, child: ElevatedButton.icon(
+          icon:  const Icon(Icons.play_arrow_rounded, size: 16, color: Colors.white),
+          label: const Text('تفعيل المزاد', style: TextStyle(fontSize: 13, color: Colors.white)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: DS.success,
+            foregroundColor: Colors.white,
+            padding:         const EdgeInsets.symmetric(vertical: 10),
+            shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          onPressed: onActivate,
+        )),
       ]);
     }
 
+    // ✅ منتهي بدون فائز — تحديد الفائز أولاً
     if (auction.status == AuctionStatus.ended && auction.winnerId == null) {
-      return SizedBox(width: double.infinity,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: DS.goldGradient,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: DS.goldShadow,
+      return SizedBox(width: double.infinity, child: Container(
+        decoration: BoxDecoration(
+          gradient:     DS.goldGradient,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow:    DS.goldShadow,
+        ),
+        child: ElevatedButton.icon(
+          icon:  const Icon(Icons.emoji_events_rounded, size: 16, color: Colors.white),
+          label: const Text('تحديد الفائز', style: TextStyle(fontSize: 13, color: Colors.white)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor:     Colors.transparent,
+            padding:         const EdgeInsets.symmetric(vertical: 10),
+            shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.emoji_events_rounded, size: 16, color: Colors.white),
-            label: const Text('تحديد الفائز', style: TextStyle(fontSize: 13, color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: onDeclareWinner,
-          ),
-        ));
+          onPressed: onDeclareWinner,
+        ),
+      ));
     }
 
+    // ✅ منتهي مع فائز — زر إرجاع الضمانات
     if (auction.status == AuctionStatus.ended && auction.winnerId != null) {
-      return GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        borderRadius: 14,
-        backgroundColor: DS.gold.withValues(alpha: 0.1),
-        border: Border.all(color: DS.gold.withValues(alpha: 0.2)),
-        child: Row(children: [
-          const Icon(Icons.emoji_events_rounded, color: DS.goldLight, size: 18),
-          const SizedBox(width: 10),
-          Text('تم تحديد الفائز بنجاح ✅',
-              style: DS.titleS.copyWith(color: DS.goldLight, fontSize: 13)),
-        ]),
-      );
+      return Column(children: [
+        GlassCard(
+          padding:         const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          borderRadius:    14,
+          backgroundColor: DS.gold.withValues(alpha: 0.1),
+          border:          Border.all(color: DS.gold.withValues(alpha: 0.2)),
+          child: Row(children: [
+            const Icon(Icons.emoji_events_rounded, color: DS.goldLight, size: 18),
+            const SizedBox(width: 10),
+            Text('تم تحديد الفائز بنجاح ✅',
+                style: DS.titleS.copyWith(color: DS.goldLight, fontSize: 13)),
+          ]),
+        ),
+        const SizedBox(height: 10),
+        // ✅ زر إرجاع الضمانات
+        SizedBox(width: double.infinity, child: OutlinedButton.icon(
+          icon:  const Icon(Icons.account_balance_wallet_rounded, size: 16, color: DS.purple),
+          label: const Text('إرجاع الضمانات', style: TextStyle(color: DS.purple, fontSize: 13)),
+          style: OutlinedButton.styleFrom(
+            side:    const BorderSide(color: DS.purple),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            shape:   RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          onPressed: onRefundDeposits,
+        )),
+      ]);
     }
 
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: OutlinedButton.icon(
-        icon: const Icon(Icons.delete_forever_rounded, size: 16, color: DS.error),
+        icon:  const Icon(Icons.delete_forever_rounded, size: 16, color: DS.error),
         label: const Text('حذف المزاد', style: TextStyle(color: DS.error, fontSize: 13)),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: DS.error, width: 1.2),
+          side:    const BorderSide(color: DS.error, width: 1.2),
           padding: const EdgeInsets.symmetric(vertical: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:   RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: onDelete,
       ),
@@ -256,17 +274,17 @@ class AdminAuctionCard extends StatelessWidget {
 
 class _DetailChip extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final Color color;
+  final String   label;
+  final Color    color;
   const _DetailChip({required this.icon, required this.label, required this.color});
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color:        color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border:       Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 13, color: color),

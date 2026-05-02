@@ -59,8 +59,6 @@ class _WalletScreenState extends State<WalletScreen>
               child: CustomScrollView(
                 physics: const BouncingScrollPhysics(),
                 slivers: [
-
-                  // ── Header ──
                   SliverToBoxAdapter(
                     child: Container(
                       decoration: const BoxDecoration(gradient: DS.headerGradient),
@@ -69,8 +67,6 @@ class _WalletScreenState extends State<WalletScreen>
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
                           child: Column(children: [
-
-                            // Title row
                             Row(children: [
                               Text('محفظتي', style: DS.titleL.copyWith(fontSize: 24)),
                               const Spacer(),
@@ -91,10 +87,7 @@ class _WalletScreenState extends State<WalletScreen>
                                 ),
                               ),
                             ]),
-
                             const SizedBox(height: 24),
-
-                            // ── بطاقة الرصيد الرئيسية ──
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(24),
@@ -109,8 +102,6 @@ class _WalletScreenState extends State<WalletScreen>
                                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
                               ),
                               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-                                // Icon + label
                                 Row(children: [
                                   Container(
                                     padding: const EdgeInsets.all(8),
@@ -123,10 +114,7 @@ class _WalletScreenState extends State<WalletScreen>
                                   const SizedBox(width: 10),
                                   Text('الرصيد المتاح', style: DS.bodySmall.copyWith(color: Colors.white70)),
                                 ]),
-
                                 const SizedBox(height: 16),
-
-                                // Main balance
                                 Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                                   Text(
                                     user != null ? user.balance.toStringAsFixed(0) : '0',
@@ -138,12 +126,9 @@ class _WalletScreenState extends State<WalletScreen>
                                     child: Text('DZD', style: DS.titleS.copyWith(color: DS.success, fontSize: 16)),
                                   ),
                                 ]),
-
                                 const SizedBox(height: 20),
                                 Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
                                 const SizedBox(height: 16),
-
-                                // الضمان المحجوز
                                 Row(children: [
                                   Container(
                                     padding: const EdgeInsets.all(6),
@@ -169,7 +154,6 @@ class _WalletScreenState extends State<WalletScreen>
                     ),
                   ),
 
-                  // ── سجل العمليات ──
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
@@ -297,7 +281,7 @@ class RechargeSheet extends StatefulWidget {
 }
 
 class _RechargeSheetState extends State<RechargeSheet> {
-  _PayMethod _method = _PayMethod.ccp;
+  _PayMethod _method    = _PayMethod.cib; // ✅ CIB افتراضياً
   final _amountCtrl     = TextEditingController();
   final _cardNameCtrl   = TextEditingController();
   final _cardNumberCtrl = TextEditingController();
@@ -307,6 +291,27 @@ class _RechargeSheetState extends State<RechargeSheet> {
   bool    _uploadingProof = false;
   String? _proofUrl;
   String? _generatedOtp;
+
+  // ✅ decoration موحد لكل الحقول
+  InputDecoration _inputDec(String label, IconData icon) => InputDecoration(
+    labelText: label,
+    labelStyle: TextStyle(color: DS.textSecondary),
+    prefixIcon: Icon(icon, color: DS.purple),
+    filled: true,
+    fillColor: DS.bgField,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: DS.border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: DS.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: DS.purple, width: 1.5),
+    ),
+  );
 
   @override
   void dispose() {
@@ -407,22 +412,37 @@ class _RechargeSheetState extends State<RechargeSheet> {
                     ),
                     const SizedBox(height: 16),
                     TextField(
-                      controller: otpCtrl, keyboardType: TextInputType.number,
-                      textDirection: TextDirection.ltr, maxLength: 6, textAlign: TextAlign.center,
-                      style: DS.titleM.copyWith(letterSpacing: 8),
-                      decoration: InputDecoration(hintText: '• • • • • •', counterText: '', filled: true, fillColor: DS.bgField, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: DS.border))),
+                      controller: otpCtrl,
+                      keyboardType: TextInputType.number,
+                      textDirection: TextDirection.ltr,
+                      maxLength: 6,
+                      textAlign: TextAlign.center,
+                      style: DS.titleM.copyWith(letterSpacing: 8, color: DS.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: '• • • • • •',
+                        counterText: '',
+                        filled: true,
+                        fillColor: DS.bgField,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: DS.border)),
+                      ),
                     ),
                     const SizedBox(height: 20),
                     Row(children: [
                       Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء'))),
                       const SizedBox(width: 12),
                       Expanded(child: GradientButton(label: 'تأكيد', isLoading: verifying, onPressed: verifying ? null : () async {
-                        if (otpCtrl.text.trim() != _generatedOtp) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('❌ رمز التحقق غير صحيح'), backgroundColor: Colors.red)); return; }
+                        if (otpCtrl.text.trim() != _generatedOtp) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('❌ رمز التحقق غير صحيح'), backgroundColor: Colors.red));
+                          return;
+                        }
                         setD(() => verifying = true);
                         try {
                           await widget.db.requestDepositWithCard(userId: widget.uid, amount: amount, cardName: _cardNameCtrl.text.trim(), cardNumber: _cardNumberCtrl.text.trim(), cardExpiry: _cardExpiryCtrl.text.trim());
                           if (mounted) { Navigator.pop(ctx); Navigator.pop(context); _showSuccessDialog(amount); }
-                        } catch (e) { setD(() => verifying = false); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e'), backgroundColor: DS.error)); }
+                        } catch (e) {
+                          setD(() => verifying = false);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e'), backgroundColor: DS.error));
+                        }
                       })),
                     ]),
                   ]),
@@ -436,22 +456,44 @@ class _RechargeSheetState extends State<RechargeSheet> {
   }
 
   void _showSuccessDialog(double amount) {
-    showDialog(context: context, builder: (_) => Directionality(textDirection: TextDirection.rtl, child: Dialog(backgroundColor: Colors.transparent, child: ClipRRect(borderRadius: BorderRadius.circular(28), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), child: Container(padding: const EdgeInsets.all(28), decoration: BoxDecoration(color: DS.bgModal.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(28), border: Border.all(color: DS.border)), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 72, height: 72, decoration: BoxDecoration(shape: BoxShape.circle, color: DS.success.withValues(alpha: 0.1), border: Border.all(color: DS.success.withValues(alpha: 0.3))), child: const Icon(Icons.check_circle_rounded, color: DS.success, size: 36)),
-      const SizedBox(height: 16),
-      Text('تم الدفع بنجاح ✅', style: DS.titleM.copyWith(color: DS.success)),
-      const SizedBox(height: 8),
-      Text('طلب شحن ${amount.toStringAsFixed(0)} دج قيد المراجعة', style: DS.body, textAlign: TextAlign.center),
-      const SizedBox(height: 4),
-      Text('سيتم تأكيده من طرف المدير قريباً', style: DS.bodySmall.copyWith(color: DS.textMuted), textAlign: TextAlign.center),
-      const SizedBox(height: 24),
-      GradientButton(label: 'حسناً', onPressed: () => Navigator.pop(context)),
-    ])))))));
+    showDialog(
+      context: context,
+      builder: (_) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(color: DS.bgModal.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(28), border: Border.all(color: DS.border)),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Container(width: 72, height: 72, decoration: BoxDecoration(shape: BoxShape.circle, color: DS.success.withValues(alpha: 0.1), border: Border.all(color: DS.success.withValues(alpha: 0.3))), child: const Icon(Icons.check_circle_rounded, color: DS.success, size: 36)),
+                  const SizedBox(height: 16),
+                  Text('تم الدفع بنجاح ✅', style: DS.titleM.copyWith(color: DS.success)),
+                  const SizedBox(height: 8),
+                  Text('طلب شحن ${amount.toStringAsFixed(0)} دج قيد المراجعة', style: DS.body, textAlign: TextAlign.center),
+                  const SizedBox(height: 4),
+                  Text('سيتم تأكيده من طرف المدير قريباً', style: DS.bodySmall.copyWith(color: DS.textMuted), textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  GradientButton(label: 'حسناً', onPressed: () => Navigator.pop(context)),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: isError ? DS.error : DS.success));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: isError ? DS.error : DS.success,
+    ));
   }
 
   @override
@@ -463,7 +505,11 @@ class _RechargeSheetState extends State<RechargeSheet> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
-            decoration: const BoxDecoration(color: DS.bgCard, borderRadius: BorderRadius.vertical(top: Radius.circular(28)), border: Border(top: BorderSide(color: DS.border))),
+            decoration: const BoxDecoration(
+              color: DS.bgCard,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border(top: BorderSide(color: DS.border)),
+            ),
             child: AnimatedPadding(
               duration: const Duration(milliseconds: 150),
               curve: Curves.easeOut,
@@ -474,35 +520,104 @@ class _RechargeSheetState extends State<RechargeSheet> {
                   const SizedBox(height: 20),
                   Text('شحن الرصيد', style: DS.titleM),
                   const SizedBox(height: 20),
+
+                  // ✅ CIB أولاً ثم CCP
                   Row(children: [
-                    Expanded(child: _MethodTab(label: 'CCP', icon: Icons.post_add_rounded, subtitle: 'حوالة بريدية', selected: _method == _PayMethod.ccp, onTap: () => setState(() => _method = _PayMethod.ccp))),
+                    Expanded(child: _MethodTab(
+                      label: 'CIB', icon: Icons.credit_card_rounded, subtitle: 'بطاقة بنكية',
+                      selected: _method == _PayMethod.cib,
+                      onTap: () => setState(() => _method = _PayMethod.cib),
+                    )),
                     const SizedBox(width: 12),
-                    Expanded(child: _MethodTab(label: 'CIB', icon: Icons.credit_card_rounded, subtitle: 'بطاقة بنكية', selected: _method == _PayMethod.cib, onTap: () => setState(() => _method = _PayMethod.cib))),
+                    Expanded(child: _MethodTab(
+                      label: 'CCP', icon: Icons.post_add_rounded, subtitle: 'حوالة بريدية',
+                      selected: _method == _PayMethod.ccp,
+                      onTap: () => setState(() => _method = _PayMethod.ccp),
+                    )),
                   ]),
+
                   const SizedBox(height: 24),
-                  TextField(controller: _amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'المبلغ (دج)', prefixIcon: Icon(Icons.payments_rounded))),
+
+                  // ✅ حقل المبلغ
+                  TextField(
+                    controller: _amountCtrl,
+                    keyboardType: TextInputType.number,
+                    style: TextStyle(color: DS.textPrimary, fontWeight: FontWeight.w600),
+                    decoration: _inputDec('المبلغ (دج)', Icons.payments_rounded),
+                  ),
+
                   const SizedBox(height: 16),
+
                   if (_method == _PayMethod.ccp) ...[
                     const _CcpInfoCard(),
                     const SizedBox(height: 16),
-                    _ProofUploadButton(proofUrl: _proofUrl, uploading: _uploadingProof, onTap: _pickAndUploadProof),
+                    _ProofUploadButton(
+                      proofUrl: _proofUrl,
+                      uploading: _uploadingProof,
+                      onTap: _pickAndUploadProof,
+                    ),
                   ],
+
                   if (_method == _PayMethod.cib) ...[
-                    TextField(controller: _cardNameCtrl, decoration: const InputDecoration(labelText: 'الاسم على البطاقة', prefixIcon: Icon(Icons.person_outline_rounded))),
+                    // ✅ حقل الاسم
+                    TextField(
+                      controller: _cardNameCtrl,
+                      style: TextStyle(color: DS.textPrimary, fontWeight: FontWeight.w600),
+                      decoration: _inputDec('الاسم على البطاقة', Icons.person_outline_rounded),
+                    ),
                     const SizedBox(height: 12),
-                    TextField(controller: _cardNumberCtrl, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, maxLength: 16, decoration: const InputDecoration(labelText: 'رقم البطاقة', prefixIcon: Icon(Icons.credit_card_rounded), counterText: '')),
+
+                    // ✅ حقل رقم البطاقة
+                    TextField(
+                      controller: _cardNumberCtrl,
+                      keyboardType: TextInputType.number,
+                      textDirection: TextDirection.ltr,
+                      maxLength: 16,
+                      style: TextStyle(color: DS.textPrimary, fontWeight: FontWeight.w600),
+                      decoration: _inputDec('رقم البطاقة', Icons.credit_card_rounded).copyWith(counterText: ''),
+                    ),
                     const SizedBox(height: 12),
+
                     Row(children: [
-                      Expanded(child: TextField(controller: _cardExpiryCtrl, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, maxLength: 5, decoration: const InputDecoration(labelText: 'MM/YY', prefixIcon: Icon(Icons.calendar_today_rounded), counterText: ''), onChanged: (v) { if (v.length == 2 && !v.contains('/')) { _cardExpiryCtrl.text = '$v/'; _cardExpiryCtrl.selection = TextSelection.collapsed(offset: 3); } })),
+                      // ✅ حقل التاريخ
+                      Expanded(child: TextField(
+                        controller: _cardExpiryCtrl,
+                        keyboardType: TextInputType.number,
+                        textDirection: TextDirection.ltr,
+                        maxLength: 5,
+                        style: TextStyle(color: DS.textPrimary, fontWeight: FontWeight.w600),
+                        decoration: _inputDec('MM/YY', Icons.calendar_today_rounded).copyWith(counterText: ''),
+                        onChanged: (v) {
+                          if (v.length == 2 && !v.contains('/')) {
+                            _cardExpiryCtrl.text = '$v/';
+                            _cardExpiryCtrl.selection = TextSelection.collapsed(offset: 3);
+                          }
+                        },
+                      )),
                       const SizedBox(width: 12),
-                      Expanded(child: TextField(controller: _cardCvvCtrl, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, maxLength: 3, obscureText: true, decoration: const InputDecoration(labelText: 'CVV', prefixIcon: Icon(Icons.lock_outline_rounded), counterText: ''))),
+
+                      // ✅ حقل CVV
+                      Expanded(child: TextField(
+                        controller: _cardCvvCtrl,
+                        keyboardType: TextInputType.number,
+                        textDirection: TextDirection.ltr,
+                        maxLength: 3,
+                        obscureText: true,
+                        style: TextStyle(color: DS.textPrimary, fontWeight: FontWeight.w600),
+                        decoration: _inputDec('CVV', Icons.lock_outline_rounded).copyWith(counterText: ''),
+                      )),
                     ]),
                   ],
+
                   const SizedBox(height: 24),
-                  GradientButton(label: 'تأكيد الشحن', isLoading: _isLoading, onPressed: (_isLoading || _uploadingProof) ? null : _submit),
+                  GradientButton(
+                    label: 'تأكيد الشحن',
+                    isLoading: _isLoading,
+                    onPressed: (_isLoading || _uploadingProof) ? null : _submit,
+                  ),
                 ]),
               ),
-            ), // AnimatedPadding
+            ),
           ),
         ),
       ),
@@ -552,10 +667,10 @@ class _CcpInfoCard extends StatelessWidget {
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [const Icon(Icons.info_outline_rounded, color: DS.purple, size: 16), const SizedBox(width: 8), Text('بيانات الحساب البريدي (CCP)', style: DS.label)]),
       const SizedBox(height: 14),
-      _InfoRow(label: 'الاسم', value: 'AMS AUCTIONS DZ'),
+      _InfoRow(label: 'الاسم',       value: 'AMS AUCTIONS DZ'),
       _InfoRow(label: 'رقم الحساب', value: '0023456789'),
-      _InfoRow(label: 'المفتاح', value: '22'),
-      _InfoRow(label: 'RIP', value: '00799999002345678922'),
+      _InfoRow(label: 'المفتاح',     value: '22'),
+      _InfoRow(label: 'RIP',         value: '00799999002345678922'),
     ]),
   );
 }
@@ -588,14 +703,25 @@ class _ProofUploadButton extends StatelessWidget {
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: double.infinity, padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: DS.bgElevated, borderRadius: BorderRadius.circular(14), border: Border.all(color: proofUrl != null ? DS.success : DS.border)),
+      decoration: BoxDecoration(
+        color: DS.bgElevated,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: proofUrl != null ? DS.success : DS.border),
+      ),
       child: uploading
           ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: DS.purple, strokeWidth: 2)))
           : Column(children: [
-        Icon(proofUrl != null ? Icons.check_circle_rounded : Icons.upload_rounded, color: proofUrl != null ? DS.success : DS.textSecondary, size: 30),
+        Icon(proofUrl != null ? Icons.check_circle_rounded : Icons.upload_rounded,
+            color: proofUrl != null ? DS.success : DS.textSecondary, size: 30),
         const SizedBox(height: 8),
-        Text(proofUrl != null ? 'تم رفع الوصل ✅' : 'ارفع صورة الوصل', style: DS.body.copyWith(color: proofUrl != null ? DS.success : DS.textSecondary)),
-        if (proofUrl == null) Padding(padding: const EdgeInsets.only(top: 4), child: Text('اضغط هنا لاختيار صورة من المعرض', style: DS.bodySmall.copyWith(color: DS.textMuted))),
+        Text(proofUrl != null ? 'تم رفع الوصل ✅' : 'ارفع صورة الوصل',
+            style: DS.body.copyWith(color: proofUrl != null ? DS.success : DS.textSecondary)),
+        if (proofUrl == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('اضغط هنا لاختيار صورة من المعرض',
+                style: DS.bodySmall.copyWith(color: DS.textMuted)),
+          ),
       ]),
     ),
   );

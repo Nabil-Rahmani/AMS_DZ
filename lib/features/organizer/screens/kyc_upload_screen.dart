@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:auction_app2/core/services/notification_service.dart';
 import '../../../core/constants/ds_colors.dart';
 import '../../../core/widgets/ds_widgets.dart';
 
@@ -19,13 +20,12 @@ class _KycUploadScreenState extends State<KycUploadScreen>
     with SingleTickerProviderStateMixin {
   final _picker = ImagePicker();
   bool _isLoading  = false;
-  bool _loadingDoc = true;        // ✅ تحميل بيانات المستخدم
-  String _accountType = 'individual'; // ✅ نوع الحساب من Firestore
+  bool _loadingDoc = true;
+  String _accountType = 'individual';
 
   late AnimationController _animCtrl;
   late Animation<double>   _fade;
 
-  // ✅ سيتم بناؤها بعد جلب accountType
   Map<String, _DocItem> _docs = {};
 
   @override
@@ -37,10 +37,9 @@ class _KycUploadScreenState extends State<KycUploadScreen>
     );
     _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic);
     _animCtrl.forward();
-    _loadAccountType(); // ✅ جلب نوع الحساب
+    _loadAccountType();
   }
 
-  // ✅ جلب accountType من Firestore
   Future<void> _loadAccountType() async {
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -60,7 +59,6 @@ class _KycUploadScreenState extends State<KycUploadScreen>
     }
   }
 
-  // ✅ بناء القائمة حسب نوع الحساب
   Map<String, _DocItem> _buildDocs(String accountType) {
     final isCompany = accountType == 'company';
     return {
@@ -69,12 +67,11 @@ class _KycUploadScreenState extends State<KycUploadScreen>
         icon:     Icons.badge_rounded,
         required: true,
       ),
-      // ✅ السجل التجاري — للشركات فقط وإلزامي
       if (isCompany)
         'commercial_register': _DocItem(
           label:    'السجل التجاري',
           icon:     Icons.business_rounded,
-          required: true, // ✅ إلزامي للشركات
+          required: true,
         ),
       'product_docs': _DocItem(
         label:    'وثائق المنتج',
@@ -176,6 +173,25 @@ class _KycUploadScreenState extends State<KycUploadScreen>
         'kycSubmittedAt':  FieldValue.serverTimestamp(),
       });
 
+      // ✅ إشعار الأدمين
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users').doc(uid).get();
+      final userName = userDoc.data()?['name'] as String? ?? 'منظم';
+
+      final adminSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'admin')
+          .limit(1)
+          .get();
+
+      if (adminSnap.docs.isNotEmpty) {
+        await NotificationService.onKycSubmitted(
+          adminId:    adminSnap.docs.first.id,
+          sellerName: userName,
+          sellerId:   uid,
+        );
+      }
+
       if (mounted) {
         _showSuccess('✅ تم إرسال وثائقك للمراجعة');
         await Future.delayed(const Duration(seconds: 1));
@@ -272,8 +288,6 @@ class _KycUploadScreenState extends State<KycUploadScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 12),
-
-                      // ✅ badge نوع الحساب
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
@@ -290,9 +304,7 @@ class _KycUploadScreenState extends State<KycUploadScreen>
                           ),
                         ]),
                       ),
-
                       const SizedBox(height: 16),
-
                       GlassCard(
                         padding:      const EdgeInsets.all(20),
                         borderRadius: 24,
@@ -342,11 +354,9 @@ class _KycUploadScreenState extends State<KycUploadScreen>
                           ),
                         ]),
                       ),
-
                       const SizedBox(height: 24),
                       const DSSection(title: 'الوثائق المطلوبة'),
                       const SizedBox(height: 16),
-
                       ..._docs.entries.toList().asMap().entries.map((entry) {
                         final i = entry.key;
                         final e = entry.value;
@@ -360,7 +370,6 @@ class _KycUploadScreenState extends State<KycUploadScreen>
                           ),
                         );
                       }),
-
                       const SizedBox(height: 8),
                       FadeSlideIn(
                         delay: const Duration(milliseconds: 500),
@@ -384,7 +393,6 @@ class _KycUploadScreenState extends State<KycUploadScreen>
   }
 }
 
-// ── Document Card ─────────────────────────────────────
 class _DocCard extends StatelessWidget {
   final _DocItem     item;
   final bool         isRequired;
@@ -476,7 +484,6 @@ class _DocCard extends StatelessWidget {
               ),
           ]),
         ),
-
         if (uploaded)
           ClipRRect(
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
